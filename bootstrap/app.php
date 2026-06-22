@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Achter de proxy van Vercel: vertrouw forwarded headers zodat HTTPS
+        // correct wordt herkend (voorkomt http-redirects / mixed content).
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'dashboard.auth' => \App\Http\Middleware\EnsureDashboardAuth::class,
         ]);
