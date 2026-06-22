@@ -9,4 +9,10 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Elk uur de laatste dagen verversen (vangt ook late conversie-attributie op).
+// Let op: op Vercel draait de scheduler niet; daar verzorgt /cron/sync dit.
 Schedule::command('redtrack:sync')->hourly()->withoutOverlapping();
+
+// Google Ads alleen inplannen als de credentials zijn ingesteld.
+if (filled(config('google_ads.developer_token'))) {
+    Schedule::command('google-ads:sync')->hourly()->withoutOverlapping();
+}

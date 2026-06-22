@@ -18,10 +18,17 @@ Route::get('/cron/sync', function (Request $request) {
     abort_unless($secret !== '' && hash_equals($secret, $provided), 403);
 
     Artisan::call('redtrack:sync');
+    $output = trim(Artisan::output());
+
+    // Google Ads alleen meesyncen als de credentials zijn ingesteld.
+    if (filled(config('google_ads.developer_token'))) {
+        Artisan::call('google-ads:sync');
+        $output .= "\n".trim(Artisan::output());
+    }
 
     return response()->json([
         'ok' => true,
-        'output' => trim(Artisan::output()),
+        'output' => $output,
     ]);
 })->name('cron.sync');
 

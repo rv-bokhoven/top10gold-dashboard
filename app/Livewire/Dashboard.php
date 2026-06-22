@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\GoogleAdStat;
 use App\Models\OfferStat;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -152,6 +153,77 @@ class Dashboard extends Component
 
         return $rows
             ->sortBy(fn ($r) => $r->{$this->offerSort} ?? 0, SORT_REGULAR, $this->offerDir === 'desc')
+            ->values();
+    }
+
+    /** Google Ads-totalen voor de periode. */
+    #[Computed]
+    public function googleAdsTotals(): array
+    {
+        [$from, $to] = $this->range();
+
+        $row = GoogleAdStat::query()
+            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw('SUM(impressions) as impressions, SUM(clicks) as clicks,
+                SUM(cost) as cost, SUM(conversions) as conversions')
+            ->first();
+
+        $impressions = (int) ($row->impressions ?? 0);
+        $clicks = (int) ($row->clicks ?? 0);
+        $cost = (float) ($row->cost ?? 0);
+        $conversions = (float) ($row->conversions ?? 0);
+
+        return [
+            'impressions' => $impressions,
+            'clicks' => $clicks,
+            'ctr' => $impressions > 0 ? $clicks / $impressions : 0,
+            'cost' => $cost,
+            'cpc' => $clicks > 0 ? $cost / $clicks : 0,
+            'conversions' => $conversions,
+            'cpa' => $conversions > 0 ? $cost / $conversions : 0,
+        ];
+    }
+
+    /** Google Ads opgeteld per ad group. */
+    #[Computed]
+    public function googleAdsByGroup(): Collection
+    {
+        return $this->googleAdsGrouped('ad_group_id', ['ad_group_name', 'campaign_name']);
+    }
+
+    /** Google Ads opgeteld per individuele ad. */
+    #[Computed]
+    public function googleAdsByAd(): Collection
+    {
+        return $this->googleAdsGrouped('ad_id', ['ad_name', 'ad_type', 'ad_group_name']);
+    }
+
+    /**
+     * @param  array<int, string>  $labels
+     */
+    protected function googleAdsGrouped(string $groupBy, array $labels): Collection
+    {
+        [$from, $to] = $this->range();
+
+        $labelSelects = collect($labels)
+            ->map(fn ($c) => "MAX({$c}) as {$c}")
+            ->implode(', ');
+
+        return GoogleAdStat::query()
+            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw("{$groupBy}, {$labelSelects},
+                SUM(impressions) as impressions, SUM(clicks) as clicks,
+                SUM(cost) as cost, SUM(conversions) as conversions")
+            ->groupBy($groupBy)
+            ->get()
+            ->map(function ($r) {
+                $r->ctr = $r->impressions > 0 ? $r->clicks / $r->impressions : 0;
+                $r->cpc = $r->clicks > 0 ? $r->cost / $r->clicks : 0;
+                $r->cpa = $r->conversions > 0 ? $r->cost / $r->conversions : 0;
+
+                return $r;
+            })
+            ->sortByDesc('cost')
             ->values();
     }
 
