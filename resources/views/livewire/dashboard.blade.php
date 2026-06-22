@@ -67,10 +67,16 @@
                 <flux:input type="date" wire:model.live="to" size="sm" />
             </div>
         @endif
+
+        <div wire:loading.flex class="hidden items-center gap-2 text-sm text-zinc-500">
+            <flux:icon icon="arrow-path" class="size-4 animate-spin" />
+            <span>Loading…</span>
+        </div>
     </div>
 
     {{-- KPI cards (2 rows of 5) --}}
-    <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div class="mb-6 grid grid-cols-2 gap-3 transition-opacity sm:grid-cols-3 lg:grid-cols-5"
+        wire:loading.class.delay="opacity-40">
         @foreach ($kpis as $kpi)
             @php
                 $showDelta = $kpi['delta'] ?? true;
@@ -153,7 +159,7 @@
     </div>
 
     {{-- Tables stacked, full width --}}
-    <div class="space-y-6">
+    <div class="space-y-6 transition-opacity" wire:loading.class.delay="opacity-40">
         {{-- By offer --}}
         <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
             <flux:heading size="lg" class="mb-4">By offer</flux:heading>
