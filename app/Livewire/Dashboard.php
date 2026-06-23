@@ -184,6 +184,13 @@ class Dashboard extends Component
         ];
     }
 
+    /** Google Ads opgeteld per campagne. */
+    #[Computed]
+    public function googleAdsByCampaign(): Collection
+    {
+        return $this->googleAdsGrouped('campaign_id', ['campaign_name']);
+    }
+
     /** Google Ads opgeteld per ad group. */
     #[Computed]
     public function googleAdsByGroup(): Collection

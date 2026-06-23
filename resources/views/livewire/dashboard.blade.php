@@ -250,7 +250,7 @@
     <div class="mt-8 transition-opacity" wire:loading.class.delay="opacity-40">
         <div class="mb-4">
             <flux:heading size="lg">Google Ads</flux:heading>
-            <flux:subheading>{{ $this->googleAdsByGroup->first()->campaign_name ?? 'Campaign performance' }}</flux:subheading>
+            <flux:subheading>{{ $this->googleAdsByCampaign->count() }} {{ \Illuminate\Support\Str::plural('campaign', $this->googleAdsByCampaign->count()) }}</flux:subheading>
         </div>
 
         @if ($ga['impressions'] === 0 && $ga['clicks'] === 0)
@@ -277,6 +277,41 @@
             </div>
 
             <div class="space-y-6">
+                {{-- By campaign --}}
+                <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                    <flux:heading size="lg" class="mb-4">By campaign</flux:heading>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+                                    <th class="py-2 pr-3">Campaign</th>
+                                    <th class="py-2 pr-3 text-right">Impr.</th>
+                                    <th class="py-2 pr-3 text-right">Clicks</th>
+                                    <th class="py-2 pr-3 text-right">CTR</th>
+                                    <th class="py-2 pr-3 text-right">Cost</th>
+                                    <th class="py-2 pr-3 text-right">CPC</th>
+                                    <th class="py-2 pr-3 text-right">Conv.</th>
+                                    <th class="py-2 pr-3 text-right">CPA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($this->googleAdsByCampaign as $c)
+                                    <tr class="border-b border-zinc-100 last:border-0 dark:border-zinc-800/60">
+                                        <td class="py-2 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ $c->campaign_name ?? '—' }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->impressions) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->clicks) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtPct($c->ctr) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cost) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cpc) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conversions) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cpa) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 {{-- By ad group --}}
                 <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
                     <flux:heading size="lg" class="mb-4">By ad group</flux:heading>
@@ -285,6 +320,7 @@
                             <thead>
                                 <tr class="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
                                     <th class="py-2 pr-3">Ad group</th>
+                                    <th class="py-2 pr-3">Campaign</th>
                                     <th class="py-2 pr-3 text-right">Impr.</th>
                                     <th class="py-2 pr-3 text-right">Clicks</th>
                                     <th class="py-2 pr-3 text-right">CTR</th>
@@ -298,6 +334,7 @@
                                 @foreach ($this->googleAdsByGroup as $g)
                                     <tr class="border-b border-zinc-100 last:border-0 dark:border-zinc-800/60">
                                         <td class="py-2 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ $g->ad_group_name ?? '—' }}</td>
+                                        <td class="py-2 pr-3 text-zinc-500">{{ $g->campaign_name }}</td>
                                         <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($g->impressions) }}</td>
                                         <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($g->clicks) }}</td>
                                         <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtPct($g->ctr) }}</td>
