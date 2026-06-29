@@ -53,6 +53,26 @@
         </div>
     </div>
 
+    {{-- Alert: campagnes zonder recente lpclick-conversies --}}
+    @if (count($this->campaignAlerts))
+        <div class="mb-6 rounded-xl border border-rose-300 bg-rose-50 p-4 dark:border-rose-500/30 dark:bg-rose-500/10">
+            <div class="flex items-start gap-3">
+                <flux:icon icon="exclamation-triangle" class="mt-0.5 size-5 shrink-0 text-rose-600 dark:text-rose-400" />
+                <div class="text-sm text-rose-800 dark:text-rose-200">
+                    <div class="font-semibold">Waarschuwing: campagne(s) zonder lpclick-conversie in de laatste {{ config('redtrack.lpclick_alert_hours', 4) }} uur</div>
+                    <ul class="mt-1 space-y-0.5">
+                        @foreach ($this->campaignAlerts as $alert)
+                            <li>
+                                <strong>{{ $alert['campaign'] }}</strong> —
+                                {{ $alert['last'] ? 'laatste lpclick '.$alert['last']->diffForHumans() : 'vandaag nog geen lpclick' }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Period selector --}}
     <div class="mb-6 flex flex-wrap items-center gap-2">
         <flux:select wire:model.live="period" size="sm" class="max-w-48">

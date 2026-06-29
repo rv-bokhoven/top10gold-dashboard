@@ -15,6 +15,13 @@ return [
     // Geheim token waarmee het /cron/sync endpoint wordt beveiligd.
     'cron_secret' => env('CRON_SECRET'),
 
+    // Waarschuw als een actieve campagne dit aantal uur geen lpclick-conversie had.
+    'lpclick_alert_hours' => env('REDTRACK_LPCLICK_ALERT_HOURS', 4),
+
+    // Alleen campagnes bewaken die in de laatste 24u minstens zoveel lpclicks
+    // hadden (voorkomt vals alarm bij low-volume campagnes).
+    'lpclick_alert_min_daily' => env('REDTRACK_LPCLICK_ALERT_MIN_DAILY', 10),
+
     /*
     | Vaste traffic-source filter. Alle rapporten worden hierop gefilterd zodat
     | we alleen "echte" Google-traffic zien (zonder deze filter zitten er veel

@@ -24,6 +24,9 @@ Route::get('/cron/sync', function (Request $request) {
     if (filled(config('google_ads.developer_token'))) {
         Artisan::call('google-ads:sync');
         $output .= "\n".trim(Artisan::output());
+
+        Artisan::call('landing-pages:check');
+        $output .= "\n".trim(Artisan::output());
     }
 
     return response()->json([

@@ -15,4 +15,5 @@ Schedule::command('redtrack:sync')->hourly()->withoutOverlapping();
 // Google Ads alleen inplannen als de credentials zijn ingesteld.
 if (filled(config('google_ads.developer_token'))) {
     Schedule::command('google-ads:sync')->hourly()->withoutOverlapping();
+    Schedule::command('landing-pages:check')->hourly()->withoutOverlapping();
 }

@@ -62,6 +62,65 @@ class RedTrackClient
         ]);
     }
 
+    /**
+     * Conversie-log (individuele conversies met tijdstip). Gebruikt voor de
+     * lpclick-alert. Geeft de ruwe records terug.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function conversions(string $from, string $to, int $per = 1000): array
+    {
+        if (blank($this->apiKey)) {
+            throw new RuntimeException('REDTRACK_API_KEY ontbreekt.');
+        }
+
+        $response = $this->request()->get('/conversions', [
+            'api_key' => $this->apiKey,
+            'date_from' => $from,
+            'date_to' => $to,
+            'per' => $per,
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException("RedTrack /conversions gaf status {$response->status()}.");
+        }
+
+        $data = $response->json();
+
+        return $data['items'] ?? $data ?? [];
+    }
+
+    /**
+     * Laatste lpclick-tijdstip per Google-campagne-id (uit sub6).
+     *
+     * @return array<string, \Carbon\CarbonImmutable>
+     */
+    public function lastLpclickPerCampaign(string $from, string $to): array
+    {
+        $latest = [];
+
+        foreach ($this->conversions($from, $to) as $c) {
+            if (($c['type'] ?? null) !== 'lpclick') {
+                continue;
+            }
+
+            $campaignId = (string) ($c['sub6'] ?? '');
+            $time = $c['created_at'] ?? null;
+
+            if ($campaignId === '' || ! $time) {
+                continue;
+            }
+
+            $ts = \Carbon\CarbonImmutable::parse($time);
+
+            if (! isset($latest[$campaignId]) || $ts->greaterThan($latest[$campaignId])) {
+                $latest[$campaignId] = $ts;
+            }
+        }
+
+        return $latest;
+    }
+
     protected function request(): PendingRequest
     {
         return Http::baseUrl($this->baseUrl)
