@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\GoogleAdStat;
+use App\Models\LandingPage;
 use App\Models\OfferStat;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -191,20 +192,6 @@ class Dashboard extends Component
         return $this->googleAdsGrouped('campaign_id', ['campaign_name']);
     }
 
-    /** Google Ads opgeteld per ad group. */
-    #[Computed]
-    public function googleAdsByGroup(): Collection
-    {
-        return $this->googleAdsGrouped('ad_group_id', ['ad_group_name', 'campaign_name']);
-    }
-
-    /** Google Ads opgeteld per individuele ad. */
-    #[Computed]
-    public function googleAdsByAd(): Collection
-    {
-        return $this->googleAdsGrouped('ad_id', ['ad_name', 'ad_type', 'ad_group_name']);
-    }
-
     /**
      * @param  array<int, string>  $labels
      */
@@ -232,6 +219,20 @@ class Dashboard extends Component
             })
             ->sortByDesc('cost')
             ->values();
+    }
+
+    /** Landingspagina's van de live ads + hun online-status. */
+    #[Computed]
+    public function landingPages(): Collection
+    {
+        return LandingPage::orderBy('ok')->orderBy('url')->get();
+    }
+
+    public function checkLandingPages(): void
+    {
+        Artisan::call('landing-pages:check');
+        unset($this->landingPages);
+        $this->dispatch('landing-pages-checked');
     }
 
     #[Computed]

@@ -71,6 +71,31 @@ class GoogleAdsClient
     }
 
     /**
+     * Final URLs (landingspagina's) van alle live (enabled) advertenties in
+     * actieve campagnes. Geeft per (url, campagne) een rij terug.
+     *
+     * @return array<int, array{url: string, campaign: string}>
+     */
+    public function liveLandingPages(): array
+    {
+        $gaql = <<<'GAQL'
+            SELECT campaign.name, ad_group_ad.ad.final_urls
+            FROM ad_group_ad
+            WHERE ad_group_ad.status = 'ENABLED' AND campaign.status = 'ENABLED'
+            GAQL;
+
+        $out = [];
+        foreach ($this->search($gaql) as $row) {
+            $campaign = $row['campaign']['name'] ?? '';
+            foreach ($row['adGroupAd']['ad']['finalUrls'] ?? [] as $url) {
+                $out[] = ['url' => $url, 'campaign' => $campaign];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Wissel het refresh token in voor een access token (OAuth2).
      */
     protected function accessToken(): string
