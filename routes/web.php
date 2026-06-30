@@ -35,6 +35,22 @@ Route::get('/cron/sync', function (Request $request) {
     ]);
 })->name('cron.sync');
 
+// Telegram-meldingen (nieuwe conversies + campagne-waarschuwingen). Roep dit
+// elk uur aan via een externe cron met ?token=<CRON_SECRET>.
+Route::get('/cron/notify', function (Request $request) {
+    $secret = (string) config('redtrack.cron_secret');
+    $provided = (string) ($request->bearerToken() ?: $request->query('token', ''));
+
+    abort_unless($secret !== '' && hash_equals($secret, $provided), 403);
+
+    Artisan::call('notifications:run');
+
+    return response()->json([
+        'ok' => true,
+        'output' => trim(Artisan::output()),
+    ]);
+})->name('cron.notify');
+
 Route::post('/logout', function () {
     session()->forget(EnsureDashboardAuth::SESSION_KEY);
     session()->regenerate();

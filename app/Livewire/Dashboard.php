@@ -5,7 +5,7 @@ namespace App\Livewire;
 use App\Models\GoogleAdStat;
 use App\Models\LandingPage;
 use App\Models\OfferStat;
-use App\Services\RedTrackClient;
+use App\Services\CampaignMonitor;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -232,60 +232,7 @@ class Dashboard extends Component
     #[Computed]
     public function campaignAlerts(): array
     {
-        $hours = (int) config('redtrack.lpclick_alert_hours', 4);
-        $minDaily = (int) config('redtrack.lpclick_alert_min_daily', 10);
-
-        try {
-            $records = app(RedTrackClient::class)->conversions(
-                CarbonImmutable::today()->subDay()->toDateString(),
-                CarbonImmutable::tomorrow()->toDateString(),
-            );
-        } catch (\Throwable $e) {
-            return []; // RedTrack tijdelijk niet bereikbaar → geen alert
-        }
-
-        // Per Google-campagne (sub6): aantal lpclicks + laatste tijdstip (laatste 24u).
-        $cutoff = CarbonImmutable::now()->subDay();
-        $byCampaign = [];
-
-        foreach ($records as $c) {
-            if (($c['type'] ?? null) !== 'lpclick') {
-                continue;
-            }
-            $cid = (string) ($c['sub6'] ?? '');
-            $time = $c['created_at'] ?? null;
-            if ($cid === '' || ! $time) {
-                continue;
-            }
-            $ts = CarbonImmutable::parse($time);
-            if ($ts->lessThan($cutoff)) {
-                continue;
-            }
-            $byCampaign[$cid]['count'] = ($byCampaign[$cid]['count'] ?? 0) + 1;
-            if (! isset($byCampaign[$cid]['last']) || $ts->greaterThan($byCampaign[$cid]['last'])) {
-                $byCampaign[$cid]['last'] = $ts;
-            }
-        }
-
-        $names = GoogleAdStat::query()->whereNotNull('campaign_name')->pluck('campaign_name', 'campaign_id');
-        $now = CarbonImmutable::now();
-        $alerts = [];
-
-        foreach ($byCampaign as $cid => $data) {
-            if ($data['count'] < $minDaily) {
-                continue; // te weinig volume om betrouwbaar te bewaken
-            }
-            $hoursSince = (int) abs($now->diffInHours($data['last']));
-            if ($hoursSince >= $hours) {
-                $alerts[] = [
-                    'campaign' => $names[$cid] ?? ('Campaign '.$cid),
-                    'last' => $data['last'],
-                    'hours' => $hoursSince,
-                ];
-            }
-        }
-
-        return $alerts;
+        return app(CampaignMonitor::class)->silentCampaigns();
     }
 
     /** Landingspagina's van de live ads + hun online-status. */

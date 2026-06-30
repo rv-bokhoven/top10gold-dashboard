@@ -17,3 +17,8 @@ if (filled(config('google_ads.developer_token'))) {
     Schedule::command('google-ads:sync')->hourly()->withoutOverlapping();
     Schedule::command('landing-pages:check')->hourly()->withoutOverlapping();
 }
+
+// Telegram-meldingen (elk uur). Op Vercel verzorgt /cron/notify dit.
+if (filled(config('telegram.bot_token'))) {
+    Schedule::command('notifications:run')->hourly()->withoutOverlapping();
+}
