@@ -310,8 +310,9 @@
                                     <th class="py-2 pr-3 text-right">CTR</th>
                                     <th class="py-2 pr-3 text-right">Cost</th>
                                     <th class="py-2 pr-3 text-right">CPC</th>
-                                    <th class="py-2 pr-3 text-right">Conv.</th>
-                                    <th class="py-2 pr-3 text-right">CPA</th>
+                                    <th class="py-2 pr-3 text-right">LP-clicks</th>
+                                    <th class="py-2 pr-3 text-right">Leads</th>
+                                    <th class="py-2 pr-3 text-right">Q-leads</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -323,8 +324,9 @@
                                         <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtPct($c->ctr) }}</td>
                                         <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cost) }}</td>
                                         <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cpc) }}</td>
-                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conversions) }}</td>
-                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cpa) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lpclick) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lead) }}</td>
+                                        <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_qlead) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

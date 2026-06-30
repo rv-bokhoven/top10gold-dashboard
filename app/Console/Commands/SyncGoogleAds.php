@@ -26,6 +26,7 @@ class SyncGoogleAds extends Command
 
         try {
             $rows = $client->reportAdsByDate($from, $to);
+            $breakdown = $client->conversionBreakdown($from, $to);
         } catch (Throwable $e) {
             $this->error($e->getMessage());
 
@@ -38,6 +39,19 @@ class SyncGoogleAds extends Command
             return self::SUCCESS;
         }
 
+        // Conversies per (datum, ad-id) uitgesplitst naar actie → kolom conv_<actie>.
+        $actions = config('google_ads.conv_actions');
+        $convMap = [];
+        foreach ($breakdown as $b) {
+            $action = strtolower($b['segments']['conversionActionName'] ?? '');
+            if (! in_array($action, $actions, true)) {
+                continue;
+            }
+            $key = ($b['segments']['date'] ?? '').'|'.($b['adGroupAd']['ad']['id'] ?? '');
+            $convMap[$key]['conv_'.$action] = ($convMap[$key]['conv_'.$action] ?? 0)
+                + (float) ($b['metrics']['conversions'] ?? 0);
+        }
+
         $now = now();
         $records = [];
 
@@ -45,7 +59,14 @@ class SyncGoogleAds extends Command
             $ad = $row['adGroupAd']['ad'] ?? [];
             $metrics = $row['metrics'] ?? [];
 
+            $key = ($row['segments']['date'] ?? '').'|'.($ad['id'] ?? '');
+            $conv = $convMap[$key] ?? [];
+
             $records[] = [
+                'conv_lpclick' => round($conv['conv_lpclick'] ?? 0, 2),
+                'conv_lead' => round($conv['conv_lead'] ?? 0, 2),
+                'conv_qlead' => round($conv['conv_qlead'] ?? 0, 2),
+                'conv_sale' => round($conv['conv_sale'] ?? 0, 2),
                 'stat_date' => $row['segments']['date'],
                 'campaign_id' => (string) ($row['campaign']['id'] ?? ''),
                 'campaign_name' => $row['campaign']['name'] ?? null,
@@ -71,7 +92,8 @@ class SyncGoogleAds extends Command
                 ['stat_date', 'ad_id'],
                 ['campaign_id', 'campaign_name', 'ad_group_id', 'ad_group_name',
                     'ad_name', 'ad_type', 'impressions', 'clicks', 'cost',
-                    'conversions', 'conversions_value', 'synced_at', 'updated_at'],
+                    'conversions', 'conversions_value', 'conv_lpclick', 'conv_lead',
+                    'conv_qlead', 'conv_sale', 'synced_at', 'updated_at'],
             );
         }
 

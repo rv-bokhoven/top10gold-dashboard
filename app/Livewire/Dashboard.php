@@ -208,7 +208,9 @@ class Dashboard extends Component
             ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
             ->selectRaw("{$groupBy}, {$labelSelects},
                 SUM(impressions) as impressions, SUM(clicks) as clicks,
-                SUM(cost) as cost, SUM(conversions) as conversions")
+                SUM(cost) as cost, SUM(conversions) as conversions,
+                SUM(conv_lpclick) as conv_lpclick, SUM(conv_lead) as conv_lead,
+                SUM(conv_qlead) as conv_qlead, SUM(conv_sale) as conv_sale")
             ->groupBy($groupBy)
             ->get()
             ->map(function ($r) {

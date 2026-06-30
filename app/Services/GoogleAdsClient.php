@@ -71,6 +71,24 @@ class GoogleAdsClient
     }
 
     /**
+     * Conversies per advertentie/dag uitgesplitst naar conversie-actie. Aparte
+     * query omdat segmenteren op conversion_action de kernmetrics zou dupliceren.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function conversionBreakdown(string $from, string $to): array
+    {
+        $gaql = <<<GAQL
+            SELECT segments.date, ad_group_ad.ad.id,
+                segments.conversion_action_name, metrics.conversions
+            FROM ad_group_ad
+            WHERE segments.date BETWEEN '{$from}' AND '{$to}' AND metrics.conversions > 0
+            GAQL;
+
+        return $this->search($gaql);
+    }
+
+    /**
      * Final URLs (landingspagina's) van alle live (enabled) advertenties in
      * actieve campagnes. Geeft per (url, campagne) een rij terug.
      *

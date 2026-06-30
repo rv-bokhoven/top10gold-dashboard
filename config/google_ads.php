@@ -26,4 +26,7 @@ return [
     // API-versie in de REST-endpoint-URL. Bump dit als Google een versie uitfaseert.
     'api_version' => env('GOOGLE_ADS_API_VERSION', 'v24'),
 
+    // Conversie-actie-namen in Google Ads die we apart opslaan (kolom conv_<naam>).
+    'conv_actions' => ['lpclick', 'lead', 'qlead', 'sale'],
+
 ];
