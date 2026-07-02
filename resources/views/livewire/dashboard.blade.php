@@ -171,11 +171,53 @@
                         dataLabels: { enabled: false },
                         grid: { borderColor: dark ? '#27272a' : '#e4e4e7' },
                         tooltip: { theme: dark ? 'dark' : 'light' },
+                        annotations: {
+                            xaxis: (data.annotations || []).map(a => ({
+                                x: a.x,
+                                strokeDashArray: 4,
+                                borderColor: dark ? '#a1a1aa' : '#52525b',
+                                label: {
+                                    text: '📌 ' + (a.note.length > 28 ? a.note.slice(0, 28) + '…' : a.note),
+                                    orientation: 'horizontal',
+                                    style: {
+                                        fontSize: '10px',
+                                        color: dark ? '#fafafa' : '#18181b',
+                                        background: dark ? '#3f3f46' : '#f4f4f5',
+                                    },
+                                },
+                            })),
+                        },
                     };
                 },
             }"
         >
             <div x-ref="canvas"></div>
+        </div>
+    </div>
+
+    {{-- Logbook --}}
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <flux:heading size="lg">Logbook</flux:heading>
+        <flux:subheading class="mb-4">Belangrijke wijzigingen — verschijnen als 📌 op de grafiek</flux:subheading>
+
+        <form wire:submit="addLogEntry" class="mb-4 flex flex-wrap items-end gap-2">
+            <flux:input type="date" wire:model="newLogDate" label="Datum" class="max-w-44" />
+            <flux:input wire:model="newLogNote" label="Wijziging" placeholder="Bijv. Thor Metals op positie 1 gezet" class="min-w-64 flex-1" />
+            <flux:button type="submit" variant="primary" icon="plus">Toevoegen</flux:button>
+        </form>
+
+        <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+            @forelse ($this->logEntries as $log)
+                <div class="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="w-24 shrink-0 tabular-nums text-zinc-500">{{ $log->entry_date->format('d M Y') }}</span>
+                        <span class="text-zinc-800 dark:text-zinc-200">{{ $log->note }}</span>
+                    </div>
+                    <flux:button wire:click="deleteLogEntry({{ $log->id }})" wire:confirm="Dit logboek-item verwijderen?" variant="subtle" size="sm" icon="trash" />
+                </div>
+            @empty
+                <div class="py-6 text-center text-zinc-400">Nog geen logboek-items.</div>
+            @endforelse
         </div>
     </div>
 

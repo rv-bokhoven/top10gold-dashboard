@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\GoogleAdStat;
 use App\Models\LandingPage;
+use App\Models\LogEntry;
 use App\Models\OfferStat;
 use App\Services\CampaignMonitor;
 use Carbon\CarbonImmutable;
@@ -48,10 +49,15 @@ class Dashboard extends Component
 
     public ?string $lastSyncMessage = null;
 
+    public string $newLogDate = '';
+
+    public string $newLogNote = '';
+
     public function mount(): void
     {
         $this->from ??= CarbonImmutable::today()->subDays(6)->toDateString();
         $this->to ??= CarbonImmutable::today()->toDateString();
+        $this->newLogDate = CarbonImmutable::today()->toDateString();
     }
 
     public function setPeriod(string $period): void
@@ -249,6 +255,35 @@ class Dashboard extends Component
         $this->dispatch('landing-pages-checked');
     }
 
+    /** Logboek-items (nieuwste eerst). */
+    #[Computed]
+    public function logEntries(): Collection
+    {
+        return LogEntry::orderByDesc('entry_date')->orderByDesc('id')->get();
+    }
+
+    public function addLogEntry(): void
+    {
+        $data = $this->validate([
+            'newLogDate' => 'required|date',
+            'newLogNote' => 'required|string|max:500',
+        ]);
+
+        LogEntry::create([
+            'entry_date' => $data['newLogDate'],
+            'note' => $data['newLogNote'],
+        ]);
+
+        $this->newLogNote = '';
+        unset($this->logEntries, $this->chart);
+    }
+
+    public function deleteLogEntry(int $id): void
+    {
+        LogEntry::whereKey($id)->delete();
+        unset($this->logEntries, $this->chart);
+    }
+
     #[Computed]
     public function syncedAt(): ?CarbonImmutable
     {
@@ -327,12 +362,24 @@ class Dashboard extends Component
             $lpClicksSeries[] = (int) $row->lp_clicks;
         }
 
+        // Logboek-items in de periode als markers op de grafiek.
+        [$from, $to] = $this->range();
+        $annotations = [];
+        foreach (LogEntry::whereBetween('entry_date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('entry_date')->get() as $log) {
+            $label = CarbonImmutable::parse($log->entry_date)->format('d M');
+            if (in_array($label, $labels, true)) {
+                $annotations[] = ['x' => $label, 'note' => $log->note];
+            }
+        }
+
         return [
             'labels' => $labels,
             'metric' => $this->metric,
             'metricLabel' => $this->metricLabel($this->metric),
             'metricSeries' => $metricSeries,
             'lpClicksSeries' => $lpClicksSeries,
+            'annotations' => $annotations,
         ];
     }
 
