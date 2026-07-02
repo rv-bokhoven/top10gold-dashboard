@@ -59,12 +59,12 @@
             <div class="flex items-start gap-3">
                 <flux:icon icon="exclamation-triangle" class="mt-0.5 size-5 shrink-0 text-rose-600 dark:text-rose-400" />
                 <div class="text-sm text-rose-800 dark:text-rose-200">
-                    <div class="font-semibold">Waarschuwing: campagne(s) zonder lpclick-conversie in de laatste {{ config('redtrack.lpclick_alert_hours', 4) }} uur</div>
+                    <div class="font-semibold">Warning: campaign(s) with no lpclick conversion in the last {{ config('redtrack.lpclick_alert_hours', 4) }} hours</div>
                     <ul class="mt-1 space-y-0.5">
                         @foreach ($this->campaignAlerts as $alert)
                             <li>
                                 <strong>{{ $alert['campaign'] }}</strong> —
-                                {{ $alert['last'] ? 'laatste lpclick '.$alert['last']->diffForHumans() : 'vandaag nog geen lpclick' }}
+                                {{ $alert['last'] ? 'last lpclick '.$alert['last']->diffForHumans() : 'no lpclick yet today' }}
                             </li>
                         @endforeach
                     </ul>
@@ -177,7 +177,7 @@
                                 strokeDashArray: 4,
                                 borderColor: dark ? '#a1a1aa' : '#52525b',
                                 label: {
-                                    text: '📌 ' + (a.note.length > 28 ? a.note.slice(0, 28) + '…' : a.note),
+                                    text: (a.note.length > 30 ? a.note.slice(0, 30) + '…' : a.note),
                                     orientation: 'horizontal',
                                     style: {
                                         fontSize: '10px',
@@ -198,12 +198,12 @@
     {{-- Logbook --}}
     <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <flux:heading size="lg">Logbook</flux:heading>
-        <flux:subheading class="mb-4">Belangrijke wijzigingen — verschijnen als 📌 op de grafiek</flux:subheading>
+        <flux:subheading class="mb-4">Important changes — shown as markers on the trend chart</flux:subheading>
 
         <form wire:submit="addLogEntry" class="mb-4 flex flex-wrap items-end gap-2">
-            <flux:input type="date" wire:model="newLogDate" label="Datum" class="max-w-44" />
-            <flux:input wire:model="newLogNote" label="Wijziging" placeholder="Bijv. Thor Metals op positie 1 gezet" class="min-w-64 flex-1" />
-            <flux:button type="submit" variant="primary" icon="plus">Toevoegen</flux:button>
+            <flux:input type="date" wire:model="newLogDate" label="Date" class="max-w-44" />
+            <flux:input wire:model="newLogNote" label="Change" placeholder="e.g. Moved Thor Metals to position 1" class="min-w-64 flex-1" />
+            <flux:button type="submit" variant="primary" icon="plus">Add</flux:button>
         </form>
 
         <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
@@ -213,10 +213,10 @@
                         <span class="w-24 shrink-0 tabular-nums text-zinc-500">{{ $log->entry_date->format('d M Y') }}</span>
                         <span class="text-zinc-800 dark:text-zinc-200">{{ $log->note }}</span>
                     </div>
-                    <flux:button wire:click="deleteLogEntry({{ $log->id }})" wire:confirm="Dit logboek-item verwijderen?" variant="subtle" size="sm" icon="trash" />
+                    <flux:button wire:click="deleteLogEntry({{ $log->id }})" wire:confirm="Delete this log entry?" variant="subtle" size="sm" icon="trash" />
                 </div>
             @empty
-                <div class="py-6 text-center text-zinc-400">Nog geen logboek-items.</div>
+                <div class="py-6 text-center text-zinc-400">No log entries yet.</div>
             @endforelse
         </div>
     </div>
@@ -317,8 +317,8 @@
 
         @if ($ga['impressions'] === 0 && $ga['clicks'] === 0)
             <div class="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-                Nog geen Google Ads-data voor deze periode. Koppel de Google Ads API
-                (<code>GOOGLE_ADS_*</code> in <code>.env</code>) en draai <code>php artisan google-ads:sync --all</code>.
+                No Google Ads data for this period yet. Connect the Google Ads API
+                (<code>GOOGLE_ADS_*</code> in <code>.env</code>) and run <code>php artisan google-ads:sync --all</code>.
             </div>
         @else
             {{-- Summary cards --}}
@@ -384,7 +384,7 @@
         <div class="mb-4 flex items-center justify-between gap-4">
             <div>
                 <flux:heading size="lg">Landing pages</flux:heading>
-                <flux:subheading>Final URLs van de live ads — online-check</flux:subheading>
+                <flux:subheading>Final URLs from the live ads — uptime check</flux:subheading>
             </div>
             <flux:button wire:click="checkLandingPages" wire:loading.attr="disabled" wire:target="checkLandingPages" icon="arrow-path" size="sm">
                 <span wire:loading.remove wire:target="checkLandingPages">Check now</span>
@@ -421,7 +421,7 @@
                                 <td class="py-2 pr-3 text-right text-zinc-400">{{ $page->checked_at?->diffForHumans() }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="py-6 text-center text-zinc-400">Nog niet gecontroleerd. Klik op <strong>Check now</strong> (vereist de Google Ads-koppeling).</td></tr>
+                            <tr><td colspan="4" class="py-6 text-center text-zinc-400">Not checked yet. Click <strong>Check now</strong> (requires the Google Ads connection).</td></tr>
                         @endforelse
                     </tbody>
                 </table>

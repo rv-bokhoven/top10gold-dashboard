@@ -89,7 +89,7 @@ class SendNotifications extends Command
 
         usort($new, fn ($a, $b) => $a['ts'] <=> $b['ts']);
 
-        $lines = ['🟢 <b>'.count($new).' nieuwe conversie(s)</b>'];
+        $lines = ['<b>'.count($new).' new conversion(s)</b>'];
         foreach ($new as $n) {
             $line = '• '.$this->types[$n['type']].' — '.e($n['campaign']).' ('.$n['ts']->format('H:i').')';
             if ($n['payout'] > 0) {
@@ -112,10 +112,10 @@ class SendNotifications extends Command
         // Nieuw stil → waarschuwen.
         foreach ($silent as $cid => $a) {
             if (! isset($state[$cid])) {
-                $last = $a['last'] ? $a['last']->diffForHumans() : 'onbekend';
-                $telegram->send("⚠️ <b>Campagne stil</b>: ".e($a['campaign'])
-                    ."\nGeen lpclick-conversie in &gt;".config('redtrack.lpclick_alert_hours', 4)
-                    ."u (laatste: {$last}).");
+                $last = $a['last'] ? $a['last']->diffForHumans() : 'unknown';
+                $telegram->send("<b>Campaign silent</b>: ".e($a['campaign'])
+                    ."\nNo lpclick conversion in &gt;".config('redtrack.lpclick_alert_hours', 4)
+                    ."h (last: {$last}).");
                 $state[$cid] = $a['campaign'];
             }
         }
@@ -123,7 +123,7 @@ class SendNotifications extends Command
         // Weer actief → herstelmelding.
         foreach ($state as $cid => $name) {
             if (! $silent->has($cid)) {
-                $telegram->send("✅ <b>".e($name)."</b> weer actief — lpclick-conversies komen weer binnen.");
+                $telegram->send("<b>".e($name)."</b> active again — lpclick conversions are coming in.");
                 unset($state[$cid]);
             }
         }
