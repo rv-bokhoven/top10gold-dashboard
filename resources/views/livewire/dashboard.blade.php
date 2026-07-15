@@ -3,9 +3,22 @@
     [$rangeFrom, $rangeTo] = $this->range();
 
     $fmtInt = fn ($v) => number_format((float) $v, 0);
-    $fmtMoney = fn ($v) => '$'.number_format((float) $v, 2);
-    $fmtEur = fn ($v) => '€'.number_format((float) $v, 2);
     $fmtPct = fn ($v) => number_format((float) $v * 100, 1).'%';
+
+    // Valuta-bewuste geldweergave. Bronwaarden zijn "native" USD (RedTrack) of
+    // EUR (Google Ads); we rekenen om naar de gekozen weergavevaluta.
+    $cur = $this->currency;          // 'USD' | 'EUR'
+    $rate = $this->fxRate();         // USD per 1 EUR
+    $sym = $cur === 'EUR' ? '€' : '$';
+    $money = function ($v, string $native = 'USD') use ($cur, $rate, $sym) {
+        $v = (float) $v;
+        if ($native !== $cur && $rate > 0) {
+            $v = $native === 'EUR' ? $v * $rate : $v / $rate;
+        }
+        return $sym.number_format($v, 2);
+    };
+    $fmtMoney = fn ($v) => $money($v, 'USD');   // RedTrack-bedragen
+    $fmtEur = fn ($v) => $money($v, 'EUR');     // Google Ads-bedragen
 
     $t = $this->totals;
     $kpis = [
@@ -92,6 +105,17 @@
         <div wire:loading.flex class="hidden items-center gap-2 text-sm text-zinc-500">
             <flux:icon icon="arrow-path" class="size-4 animate-spin" />
             <span>Loading…</span>
+        </div>
+
+        <div class="ml-auto inline-flex overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+            @foreach (['USD' => '$ USD', 'EUR' => '€ EUR'] as $val => $label)
+                <button type="button" wire:click="$set('currency', '{{ $val }}')"
+                    @class([
+                        'px-3 py-1.5 text-sm font-medium transition',
+                        'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' => $currency === $val,
+                        'bg-white text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-300' => $currency !== $val,
+                    ])>{{ $label }}</button>
+            @endforeach
         </div>
     </div>
 
@@ -192,32 +216,6 @@
             }"
         >
             <div x-ref="canvas"></div>
-        </div>
-    </div>
-
-    {{-- Logbook --}}
-    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <flux:heading size="lg">Logbook</flux:heading>
-        <flux:subheading class="mb-4">Important changes — shown as markers on the trend chart</flux:subheading>
-
-        <form wire:submit="addLogEntry" class="mb-4 flex flex-wrap items-end gap-2">
-            <flux:input type="date" wire:model="newLogDate" label="Date" class="max-w-44" />
-            <flux:input wire:model="newLogNote" label="Change" placeholder="e.g. Moved Thor Metals to position 1" class="min-w-64 flex-1" />
-            <flux:button type="submit" variant="primary" icon="plus">Add</flux:button>
-        </form>
-
-        <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-            @forelse ($this->logEntries as $log)
-                <div class="flex items-center justify-between gap-3 py-2 text-sm">
-                    <div class="flex items-center gap-3">
-                        <span class="w-24 shrink-0 tabular-nums text-zinc-500">{{ $log->entry_date->format('d M Y') }}</span>
-                        <span class="text-zinc-800 dark:text-zinc-200">{{ $log->note }}</span>
-                    </div>
-                    <flux:button wire:click="deleteLogEntry({{ $log->id }})" wire:confirm="Delete this log entry?" variant="subtle" size="sm" icon="trash" />
-                </div>
-            @empty
-                <div class="py-6 text-center text-zinc-400">No log entries yet.</div>
-            @endforelse
         </div>
     </div>
 
@@ -426,6 +424,32 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    {{-- Logbook --}}
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <flux:heading size="lg">Logbook</flux:heading>
+        <flux:subheading class="mb-4">Important changes — shown as markers on the trend chart</flux:subheading>
+
+        <form wire:submit="addLogEntry" class="mb-4 flex flex-wrap items-end gap-2">
+            <flux:input type="date" wire:model="newLogDate" label="Date" class="max-w-44" />
+            <flux:input wire:model="newLogNote" label="Change" placeholder="e.g. Moved Thor Metals to position 1" class="min-w-64 flex-1" />
+            <flux:button type="submit" variant="primary" icon="plus">Add</flux:button>
+        </form>
+
+        <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+            @forelse ($this->logEntries as $log)
+                <div class="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="w-24 shrink-0 tabular-nums text-zinc-500">{{ $log->entry_date->format('d M Y') }}</span>
+                        <span class="text-zinc-800 dark:text-zinc-200">{{ $log->note }}</span>
+                    </div>
+                    <flux:button wire:click="deleteLogEntry({{ $log->id }})" wire:confirm="Delete this log entry?" variant="subtle" size="sm" icon="trash" />
+                </div>
+            @empty
+                <div class="py-6 text-center text-zinc-400">No log entries yet.</div>
+            @endforelse
         </div>
     </div>
 </div>

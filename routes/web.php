@@ -20,6 +20,9 @@ Route::get('/cron/sync', function (Request $request) {
     Artisan::call('redtrack:sync');
     $output = trim(Artisan::output());
 
+    Artisan::call('fx:update');
+    $output .= "\n".trim(Artisan::output());
+
     // Google Ads alleen meesyncen als de credentials zijn ingesteld.
     if (filled(config('google_ads.developer_token'))) {
         Artisan::call('google-ads:sync');

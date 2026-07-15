@@ -16,7 +16,7 @@ return [
     'cron_secret' => env('CRON_SECRET'),
 
     // Waarschuw als een actieve campagne dit aantal uur geen lpclick-conversie had.
-    'lpclick_alert_hours' => env('REDTRACK_LPCLICK_ALERT_HOURS', 4),
+    'lpclick_alert_hours' => env('REDTRACK_LPCLICK_ALERT_HOURS', 8),
 
     // Alleen campagnes bewaken die in de laatste 24u minstens zoveel lpclicks
     // hadden (voorkomt vals alarm bij low-volume campagnes).

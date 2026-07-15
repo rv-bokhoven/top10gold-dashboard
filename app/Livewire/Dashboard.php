@@ -6,6 +6,7 @@ use App\Models\GoogleAdStat;
 use App\Models\LandingPage;
 use App\Models\LogEntry;
 use App\Models\OfferStat;
+use App\Models\Setting;
 use App\Services\CampaignMonitor;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -40,6 +41,9 @@ class Dashboard extends Component
 
     #[Url]
     public string $metric = 'leads';
+
+    #[Url]
+    public string $currency = 'USD';
 
     #[Url]
     public string $offerSort = 'lp_clicks';
@@ -381,6 +385,12 @@ class Dashboard extends Component
             'lpClicksSeries' => $lpClicksSeries,
             'annotations' => $annotations,
         ];
+    }
+
+    /** Actuele EUR→USD-koers (USD per 1 EUR). */
+    public function fxRate(): float
+    {
+        return (float) Setting::get('fx.eur_usd', config('currency.eur_usd_fallback', 1.08));
     }
 
     public function metricLabel(string $metric): string
