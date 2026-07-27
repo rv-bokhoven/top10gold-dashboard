@@ -76,7 +76,13 @@ class SendNotifications extends Command
             }
 
             $campaign = $names[(string) ($c['sub6'] ?? '')] ?? ($c['campaign'] ?? 'onbekend');
-            $new[] = ['type' => $type, 'campaign' => $campaign, 'ts' => $ts, 'payout' => (float) ($c['payout'] ?? 0)];
+            $new[] = [
+                'type' => $type,
+                'campaign' => $campaign,
+                'offer' => $c['offer'] ?? null,
+                'ts' => $ts,
+                'payout' => (float) ($c['payout'] ?? 0),
+            ];
 
             if ($ts->greaterThan($maxTs)) {
                 $maxTs = $ts;
@@ -91,7 +97,11 @@ class SendNotifications extends Command
 
         $lines = ['<b>'.count($new).' new conversion(s)</b>'];
         foreach ($new as $n) {
-            $line = '• '.$this->types[$n['type']].' — '.e($n['campaign']).' ('.$n['ts']->format('H:i').')';
+            $line = '• '.$this->types[$n['type']].' — '.e($n['campaign']);
+            if (! empty($n['offer'])) {
+                $line .= ' → '.e($n['offer']);
+            }
+            $line .= ' ('.$n['ts']->format('H:i').')';
             if ($n['payout'] > 0) {
                 $line .= ' — $'.number_format($n['payout'], 2);
             }
