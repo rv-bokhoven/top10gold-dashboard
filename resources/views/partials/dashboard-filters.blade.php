@@ -6,7 +6,7 @@
         {{ \Carbon\CarbonImmutable::parse($rangeFrom)->format('d M Y') }} – {{ \Carbon\CarbonImmutable::parse($rangeTo)->format('d M Y') }}
     </flux:subheading>
 
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2">
         <flux:select wire:model.live="period" size="sm" class="max-w-44">
             @foreach ($this::PERIODS as $value => $label)
                 <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
@@ -23,11 +23,11 @@
             <flux:icon icon="arrow-path" class="size-4 animate-spin" />
         </div>
 
-        <div class="inline-flex overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
-            @foreach (['USD' => '$ USD', 'EUR' => '€ EUR'] as $val => $label)
+        <div class="inline-flex h-8 shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+            @foreach (['USD' => '$', 'EUR' => '€'] as $val => $label)
                 <button type="button" wire:click="$set('currency', '{{ $val }}')"
                     @class([
-                        'px-3 py-1.5 text-sm font-medium transition',
+                        'inline-flex items-center px-3 text-sm font-medium transition',
                         'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' => $currency === $val,
                         'bg-white text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-300' => $currency !== $val,
                     ])>{{ $label }}</button>
