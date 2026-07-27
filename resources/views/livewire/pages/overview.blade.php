@@ -19,8 +19,6 @@
 @endphp
 
 <div>
-    <flux:heading size="xl" class="mb-2">Overview</flux:heading>
-
     @include('partials.dashboard-filters')
 
     {{-- Alert: campaigns with no recent lpclick conversions --}}
@@ -44,19 +42,19 @@
     @endif
 
     {{-- KPI cards (2 rows of 5) --}}
-    <div class="mb-6 grid grid-cols-2 gap-3 transition-opacity sm:grid-cols-3 lg:grid-cols-5" wire:loading.class.delay="opacity-40">
+    <div class="mb-4 grid grid-cols-2 gap-2 transition-opacity sm:grid-cols-3 lg:grid-cols-5" wire:loading.class.delay="opacity-40">
         @foreach ($kpis as $kpi)
             @php
                 $showDelta = $kpi['delta'] ?? true;
                 $delta = $showDelta ? $this->delta($kpi['key']) : null;
             @endphp
-            <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div class="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ $kpi['label'] }}</div>
-                <div class="mt-1 text-2xl font-semibold text-zinc-900 dark:text-white">{{ $kpi['value'] }}</div>
+                <div class="mt-0.5 text-xl font-semibold text-zinc-900 dark:text-white">{{ $kpi['value'] }}</div>
                 @if (! $showDelta)
-                    <div class="mt-1 text-xs text-zinc-400">&nbsp;</div>
+                    <div class="mt-0.5 text-xs text-zinc-400">&nbsp;</div>
                 @elseif ($delta === null)
-                    <div class="mt-1 text-xs text-zinc-400">no comparison</div>
+                    <div class="mt-0.5 text-xs text-zinc-400">no comparison</div>
                 @else
                     @php
                         $positive = $delta > 0;
@@ -64,7 +62,7 @@
                         $neutral = abs($delta) < 0.05;
                     @endphp
                     <div @class([
-                        'mt-1 inline-flex items-center gap-1 text-xs font-medium',
+                        'mt-0.5 inline-flex items-center gap-1 text-xs font-medium',
                         'text-zinc-400' => $neutral,
                         'text-emerald-600 dark:text-emerald-400' => ! $neutral && $good,
                         'text-rose-600 dark:text-rose-400' => ! $neutral && ! $good,
@@ -81,8 +79,8 @@
     </div>
 
     {{-- Trend chart --}}
-    <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <div class="mb-4 flex items-center justify-between">
+    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div class="mb-3 flex items-center justify-between">
             <flux:heading size="lg">Daily trend</flux:heading>
             <flux:select wire:model.live="metric" size="sm" class="max-w-44">
                 <flux:select.option value="leads">Leads</flux:select.option>
@@ -108,7 +106,7 @@
                     const dark = document.documentElement.classList.contains('dark');
                     const accent = dark ? '#ffffff' : '#000000';
                     return {
-                        chart: { type: 'area', height: 300, fontFamily: 'inherit', background: 'transparent', toolbar: { show: false }, animations: { enabled: true } },
+                        chart: { type: 'area', height: 230, fontFamily: 'inherit', background: 'transparent', toolbar: { show: false }, animations: { enabled: true } },
                         series: [{ name: data.metricLabel, data: data.metricSeries }],
                         xaxis: { categories: data.labels, labels: { style: { colors: '#71717a' } }, axisBorder: { color: dark ? '#27272a' : '#e4e4e7' }, axisTicks: { color: dark ? '#27272a' : '#e4e4e7' } },
                         yaxis: { labels: { style: { colors: '#71717a' } } },
