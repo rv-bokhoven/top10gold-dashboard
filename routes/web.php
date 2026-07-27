@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Middleware\EnsureDashboardAuth;
-use App\Livewire\Dashboard;
 use App\Livewire\Login;
+use App\Livewire\Pages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +61,10 @@ Route::post('/logout', function () {
     return redirect()->route('login');
 })->name('logout');
 
-Route::get('/', Dashboard::class)
-    ->middleware('dashboard.auth')
-    ->name('dashboard');
+Route::middleware('dashboard.auth')->group(function () {
+    Route::get('/', Pages\Overview::class)->name('dashboard');
+    Route::get('/offers', Pages\Offers::class)->name('offers');
+    Route::get('/google-ads', Pages\GoogleAds::class)->name('google-ads');
+    Route::get('/landing-pages', Pages\LandingPages::class)->name('landing-pages');
+    Route::get('/logbook', Pages\Logbook::class)->name('logbook');
+});
