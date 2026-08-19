@@ -23,11 +23,26 @@ return [
     'lpclick_alert_min_daily' => env('REDTRACK_LPCLICK_ALERT_MIN_DAILY', 10),
 
     /*
-    | Vaste traffic-source filter. Alle rapporten worden hierop gefilterd zodat
-    | we alleen "echte" Google-traffic zien (zonder deze filter zitten er veel
-    | bot-clicks in de data).
+    | Bot-filter. Alle rapporten worden op deze rt_source gefilterd; echte
+    | ad-clicks dragen deze URL-param, bots (die de LP direct raken) niet.
+    | LET OP: dit is enkel de bot-filter, niet de source-splitsing. Zowel de
+    | Google- als de Bing-campagne dragen momenteel rt_source=Google; het
+    | scheiden van Google/Bing gebeurt op de RedTrack-source (zie 'sources').
     */
     'rt_source' => env('REDTRACK_RT_SOURCE', 'Google'),
+
+    /*
+    | Traffic-sources die we los willen tonen. We syncen met group=...,source
+    | en mappen de RedTrack-source_title naar een canonieke key via 'match'.
+    | Rijen waarvan de source_title niet matcht, worden overgeslagen.
+    */
+    'sources' => [
+        'google' => ['label' => 'Google', 'match' => 'Google Ads (No-redirect tracking)'],
+        'bing' => ['label' => 'Bing', 'match' => 'BingAds'],
+    ],
+
+    // Canonieke source-key voor bestaande/onbekende rijen (backfill + fallback).
+    'default_source' => 'google',
 
     /*
     | Eerste dag waarvandaan een volledige backfill begint (accountstart).

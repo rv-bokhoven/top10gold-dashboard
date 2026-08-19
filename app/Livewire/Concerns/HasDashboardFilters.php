@@ -40,6 +40,10 @@ trait HasDashboardFilters
     #[Url]
     public string $currency = 'USD';
 
+    // Traffic-source filter: 'all' of een key uit config('redtrack.sources').
+    #[Url]
+    public string $source = 'all';
+
     public ?string $lastSyncMessage = null;
 
     public function mountHasDashboardFilters(): void
@@ -125,9 +129,23 @@ trait HasDashboardFilters
         return $this->aggregateByDate($from, $to);
     }
 
+    /**
+     * Beperk een OfferStat-query tot de gekozen source ('all' = geen filter).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function applySourceFilter($query)
+    {
+        return $query->when(
+            $this->source !== 'all',
+            fn ($q) => $q->where('source', $this->source),
+        );
+    }
+
     protected function aggregateByDate(CarbonImmutable $from, CarbonImmutable $to): Collection
     {
-        return OfferStat::query()
+        return $this->applySourceFilter(OfferStat::query())
             ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('stat_date,
                 SUM(lp_views) as lp_views, SUM(lp_clicks) as lp_clicks,

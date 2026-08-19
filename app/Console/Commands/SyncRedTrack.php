@@ -14,7 +14,8 @@ class SyncRedTrack extends Command
         {--from= : Startdatum YYYY-MM-DD}
         {--to= : Einddatum YYYY-MM-DD (standaard vandaag)}
         {--days= : Aantal dagen terugkijken vanaf vandaag}
-        {--all : Volledige backfill vanaf redtrack.backfill_from}';
+        {--all : Volledige backfill vanaf redtrack.backfill_from}
+        {--fresh : Verwijder bestaande rijen in het bereik eerst (schone re-sync)}';
 
     protected $description = 'Synchroniseer RedTrack-stats (rt_source=Google) naar de lokale database';
 
@@ -22,10 +23,10 @@ class SyncRedTrack extends Command
     {
         [$from, $to] = $this->resolveRange();
 
-        $this->info("RedTrack sync: {$from} t/m {$to} (rt_source=".config('redtrack.rt_source').')');
+        $this->info("RedTrack sync: {$from} t/m {$to} (rt_source=".config('redtrack.rt_source').', per source)');
 
         try {
-            $rows = $client->reportByDateOffer($from, $to);
+            $rows = $client->reportByDateSource($from, $to);
         } catch (Throwable $e) {
             $this->error($e->getMessage());
 
@@ -38,13 +39,25 @@ class SyncRedTrack extends Command
             return self::SUCCESS;
         }
 
+        // source-naam (bijv. "BingAds") -> canonieke key (bijv. "bing").
+        $sourceMap = collect(config('redtrack.sources'))
+            ->mapWithKeys(fn ($cfg, $key) => [$cfg['match'] => $key]);
+
         $map = config('redtrack.conv_types');
         $sumCols = fn (array $row, string $type) => collect((array) ($map[$type] ?? []))
             ->sum(fn ($col) => (int) ($row[$col] ?? 0));
         $now = now();
         $records = [];
+        $skipped = 0;
 
         foreach ($rows as $row) {
+            $sourceKey = $sourceMap[$row['source'] ?? ''] ?? null;
+            if ($sourceKey === null) {
+                $skipped++;
+
+                continue;
+            }
+
             $offerId = ($row['offer_id'] ?? '') ?: OfferStat::CAMPAIGN;
 
             $leads = $sumCols($row, 'lead');
@@ -54,6 +67,7 @@ class SyncRedTrack extends Command
             $records[] = [
                 'stat_date' => $row['date'],
                 'offer_id' => $offerId,
+                'source' => $sourceKey,
                 'offer_title' => ($row['offer'] ?? '') ?: null,
                 'lp_views' => (int) ($row['lp_views'] ?? 0),
                 'lp_clicks' => (int) ($row['lp_clicks'] ?? 0),
@@ -70,18 +84,25 @@ class SyncRedTrack extends Command
             ];
         }
 
-        // Upsert: bestaande (datum, offer)-rijen worden bijgewerkt, nieuwe toegevoegd.
+        // --fresh: maak het bereik eerst leeg zodat oude (vervuilde) rijen zonder
+        // per-source-splitsing niet als spookrijen achterblijven.
+        if ($this->option('fresh')) {
+            $deleted = OfferStat::whereBetween('stat_date', [$from, $to])->delete();
+            $this->info("Fresh: {$deleted} bestaande rijen in {$from}..{$to} verwijderd.");
+        }
+
+        // Upsert: bestaande (datum, offer, source)-rijen worden bijgewerkt, nieuwe toegevoegd.
         foreach (array_chunk($records, 500) as $chunk) {
             OfferStat::upsert(
                 $chunk,
-                ['stat_date', 'offer_id'],
+                ['stat_date', 'offer_id', 'source'],
                 ['offer_title', 'lp_views', 'lp_clicks', 'clicks', 'leads',
                     'qleads', 'sales', 'conversions', 'cost', 'revenue',
                     'synced_at', 'updated_at'],
             );
         }
 
-        $this->info(count($records).' rijen gesynchroniseerd.');
+        $this->info(count($records).' rijen gesynchroniseerd.'.($skipped ? " ({$skipped} rijen zonder bekende source overgeslagen.)" : ''));
 
         return self::SUCCESS;
     }

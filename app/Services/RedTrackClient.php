@@ -63,6 +63,23 @@ class RedTrackClient
     }
 
     /**
+     * Rapport gegroepeerd op datum, offer én traffic-source: één rij per
+     * (datum, offer, source). Het `source`-veld bevat de source-naam (bijv.
+     * "BingAds" of "Google Ads (No-redirect tracking)"), waarmee we Google en
+     * Bing scheiden — de rt_source-filter (bot-filter) blijft actief.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function reportByDateSource(string $from, string $to): array
+    {
+        return $this->report([
+            'group' => 'date,offer,source',
+            'date_from' => $from,
+            'date_to' => $to,
+        ]);
+    }
+
+    /**
      * Conversie-log (individuele conversies met tijdstip). Gebruikt voor de
      * lpclick-alert. Geeft de ruwe records terug.
      *

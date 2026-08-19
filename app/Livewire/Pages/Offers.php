@@ -37,7 +37,7 @@ class Offers extends Component
     {
         [$from, $to] = $this->range();
 
-        $rows = OfferStat::query()
+        $rows = $this->applySourceFilter(OfferStat::query())
             ->offers()
             ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('offer_id, MAX(offer_title) as offer_title,
