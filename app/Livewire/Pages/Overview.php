@@ -4,6 +4,7 @@ namespace App\Livewire\Pages;
 
 use App\Livewire\Concerns\HasDashboardFilters;
 use App\Models\LogEntry;
+use App\Models\OfferStat;
 use App\Services\CampaignMonitor;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -111,6 +112,54 @@ class Overview extends Component
             'metricSeries' => $metricSeries,
             'annotations' => $annotations,
         ];
+    }
+
+    /**
+     * Stats per maand over ALLE maanden (los van de periode-filter), met source-
+     * filter en handmatige correcties. Voor snelle maand-op-maand vergelijking.
+     */
+    #[Computed]
+    public function monthlyStats(): Collection
+    {
+        $min = $this->applySourceFilter(OfferStat::query())->min('stat_date');
+
+        if (! $min) {
+            return collect();
+        }
+
+        $from = CarbonImmutable::parse($min)->startOfMonth();
+        $to = CarbonImmutable::today();
+
+        // Hergebruik de gecorrigeerde dag-aggregatie en bucket per maand.
+        return $this->aggregateByDate($from, $to)
+            ->groupBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->format('Y-m'))
+            ->map(function (Collection $rows, string $month) {
+                $sum = fn (string $k) => (float) $rows->sum($k);
+
+                $lpViews = $sum('lp_views');
+                $lpClicks = $sum('lp_clicks');
+                $leads = $sum('leads');
+                $cost = $sum('cost');
+                $revenue = $sum('revenue');
+
+                return (object) [
+                    'month' => $month,
+                    'lp_views' => $lpViews,
+                    'lp_clicks' => $lpClicks,
+                    'lp_click_cr' => $lpViews > 0 ? $lpClicks / $lpViews : 0,
+                    'lpclick_to_lead' => $lpClicks > 0 ? $leads / $lpClicks : 0,
+                    'leads' => $leads,
+                    'qleads' => $sum('qleads'),
+                    'sales' => $sum('sales'),
+                    'conversions' => $sum('conversions'),
+                    'cost' => $cost,
+                    'revenue' => $revenue,
+                    'profit' => $revenue - $cost,
+                    'roi' => $cost > 0 ? ($revenue - $cost) / $cost : null,
+                ];
+            })
+            ->sortByDesc('month')
+            ->values();
     }
 
     public function metricLabel(string $metric): string

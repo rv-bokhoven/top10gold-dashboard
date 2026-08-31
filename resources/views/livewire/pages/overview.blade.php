@@ -135,4 +135,53 @@
             <div x-ref="canvas"></div>
         </div>
     </div>
+
+    {{-- Monthly overview (all months, independent of the date filter) --}}
+    <div class="mt-4 rounded-xl border border-zinc-200 bg-white p-5 transition-opacity dark:border-zinc-800 dark:bg-zinc-900" wire:loading.class.delay="opacity-40">
+        <flux:heading size="lg">Monthly overview</flux:heading>
+        <flux:subheading class="mb-4">
+            All months{{ $source === 'all' ? '' : ' · '.(config('redtrack.sources.'.$source.'.label') ?? $source) }} — compare performance at a glance
+        </flux:subheading>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+                        <th class="py-2 pr-3">Month</th>
+                        <th class="py-2 pr-3 text-right">LP Views</th>
+                        <th class="py-2 pr-3 text-right">LP Clicks</th>
+                        <th class="py-2 pr-3 text-right">CR</th>
+                        <th class="py-2 pr-3 text-right">Leads</th>
+                        <th class="py-2 pr-3 text-right">Q-Leads</th>
+                        <th class="py-2 pr-3 text-right">Sales</th>
+                        <th class="py-2 pr-3 text-right">Revenue</th>
+                        <th class="py-2 pr-3 text-right">Cost</th>
+                        <th class="py-2 pr-3 text-right">ROI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($this->monthlyStats as $m)
+                        <tr class="border-b border-zinc-100 last:border-0 dark:border-zinc-800/60">
+                            <td class="py-2 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ \Carbon\CarbonImmutable::parse($m->month.'-01')->format('M Y') }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_views) }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_clicks) }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtPct($m->lp_click_cr) }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->leads) }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->qleads) }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->sales) }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtMoney($m->revenue) }}</td>
+                            <td class="py-2 pr-3 text-right tabular-nums text-zinc-500">{{ $fmtMoney($m->cost) }}</td>
+                            <td @class([
+                                'py-2 pr-3 text-right tabular-nums font-semibold',
+                                'text-zinc-400' => $m->roi === null,
+                                'text-emerald-600 dark:text-emerald-400' => $m->roi !== null && $m->roi >= 0,
+                                'text-rose-600 dark:text-rose-400' => $m->roi !== null && $m->roi < 0,
+                            ])>{{ $m->roi === null ? '—' : $fmtPct($m->roi) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="10" class="py-6 text-center text-zinc-400">No data yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
