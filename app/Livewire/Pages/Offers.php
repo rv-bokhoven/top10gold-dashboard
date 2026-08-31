@@ -46,7 +46,10 @@ class Offers extends Component
                 SUM(conversions) as conversions, SUM(clicks) as clicks,
                 SUM(cost) as cost, SUM(revenue) as revenue')
             ->groupBy('offer_id')
-            ->get()
+            ->get();
+
+        // Handmatige correcties toepassen vóór de CR-berekening.
+        $rows = $this->mergeOfferCorrections($rows, $from, $to)
             ->map(function ($r) {
                 $r->lpclick_to_lead = $r->lp_clicks > 0 ? $r->leads / $r->lp_clicks : 0;
                 $r->lead_to_qlead = $r->leads > 0 ? $r->qleads / $r->leads : 0;

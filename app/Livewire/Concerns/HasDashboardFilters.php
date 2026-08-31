@@ -4,6 +4,7 @@ namespace App\Livewire\Concerns;
 
 use App\Models\OfferStat;
 use App\Models\Setting;
+use App\Models\StatCorrection;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -145,7 +146,7 @@ trait HasDashboardFilters
 
     protected function aggregateByDate(CarbonImmutable $from, CarbonImmutable $to): Collection
     {
-        return $this->applySourceFilter(OfferStat::query())
+        $rows = $this->applySourceFilter(OfferStat::query())
             ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('stat_date,
                 SUM(lp_views) as lp_views, SUM(lp_clicks) as lp_clicks,
@@ -156,5 +157,99 @@ trait HasDashboardFilters
             ->groupBy('stat_date')
             ->orderBy('stat_date')
             ->get();
+
+        return $this->mergeDateCorrections($rows, $from, $to);
+    }
+
+    /** Handmatige correcties binnen de periode, gefilterd op de gekozen source. */
+    protected function correctionDeltas(CarbonImmutable $from, CarbonImmutable $to): Collection
+    {
+        return $this->applySourceFilter(StatCorrection::query())
+            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+            ->get();
+    }
+
+    /**
+     * Revenue-delta van een correctie omgerekend naar de native basis (USD),
+     * zodat het optelt bij offer_stats.revenue. EUR-correcties zijn zo stabiel
+     * in de EUR-weergave (koers valt tegen money() weg).
+     */
+    protected function correctionRevenueUsd(StatCorrection $c): float
+    {
+        $v = (float) $c->revenue;
+
+        return $c->revenue_currency === 'EUR' ? $v * $this->fxRate() : $v;
+    }
+
+    /** Tel de correctie-deltas op bij de per-dag geaggregeerde rijen. */
+    protected function mergeDateCorrections(Collection $rows, CarbonImmutable $from, CarbonImmutable $to): Collection
+    {
+        $corrections = $this->correctionDeltas($from, $to);
+
+        if ($corrections->isEmpty()) {
+            return $rows;
+        }
+
+        $byDate = $rows->keyBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->toDateString());
+
+        foreach ($corrections as $c) {
+            $key = $c->stat_date->toDateString();
+            $row = $byDate->get($key);
+
+            if (! $row) {
+                $row = new OfferStat(['stat_date' => $key]);
+                foreach (['lp_views', 'lp_clicks', 'clicks', 'leads', 'qleads', 'sales', 'conversions', 'cost', 'revenue'] as $f) {
+                    $row->{$f} = 0;
+                }
+                $byDate->put($key, $row);
+            }
+
+            $this->addCorrectionDeltas($row, $c);
+        }
+
+        return $byDate->values()
+            ->sortBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->toDateString())
+            ->values();
+    }
+
+    /** Tel de correctie-deltas op bij de per-offer geaggregeerde rijen. */
+    public function mergeOfferCorrections(Collection $rows, CarbonImmutable $from, CarbonImmutable $to): Collection
+    {
+        $corrections = $this->correctionDeltas($from, $to);
+
+        if ($corrections->isEmpty()) {
+            return $rows;
+        }
+
+        $byOffer = $rows->keyBy('offer_id');
+
+        foreach ($corrections as $c) {
+            // Correcties gelden op offer-niveau; de campagne-/landingrij overslaan.
+            if ($c->offer_id === OfferStat::CAMPAIGN) {
+                continue;
+            }
+
+            $row = $byOffer->get($c->offer_id);
+
+            // Offer zonder basis-rij in deze periode: overslaan (geen titel/context).
+            if ($row) {
+                $this->addCorrectionDeltas($row, $c);
+            }
+        }
+
+        return $byOffer->values();
+    }
+
+    /** Tel de deltas van één correctie op bij een geaggregeerde rij. */
+    protected function addCorrectionDeltas(object $row, StatCorrection $c): void
+    {
+        $row->lp_views = (int) ($row->lp_views ?? 0) + $c->d_lp_views;
+        $row->lp_clicks = (int) ($row->lp_clicks ?? 0) + $c->d_lp_clicks;
+        $row->clicks = (int) ($row->clicks ?? 0) + $c->d_clicks;
+        $row->leads = (int) ($row->leads ?? 0) + $c->d_leads;
+        $row->qleads = (int) ($row->qleads ?? 0) + $c->d_qleads;
+        $row->sales = (int) ($row->sales ?? 0) + $c->d_sales;
+        $row->conversions = (int) ($row->conversions ?? 0) + $c->d_conversions;
+        $row->revenue = (float) ($row->revenue ?? 0) + $this->correctionRevenueUsd($c);
     }
 }
