@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\OfferStat;
+use App\Services\DashboardCache;
 use App\Services\RedTrackClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -19,7 +20,7 @@ class SyncRedTrack extends Command
 
     protected $description = 'Synchroniseer RedTrack-stats (rt_source=Google) naar de lokale database';
 
-    public function handle(RedTrackClient $client): int
+    public function handle(RedTrackClient $client, DashboardCache $cache): int
     {
         [$from, $to] = $this->resolveRange();
 
@@ -101,6 +102,10 @@ class SyncRedTrack extends Command
                     'synced_at', 'updated_at'],
             );
         }
+
+        // Opnieuw laden toont direct de nieuwe data in plaats van een oude
+        // afgeleide totaalsom uit de database-cache.
+        $cache->clear();
 
         $this->info(count($records).' rijen gesynchroniseerd.'.($skipped ? " ({$skipped} rijen zonder bekende source overgeslagen.)" : ''));
 

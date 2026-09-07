@@ -2,7 +2,7 @@
     <flux:heading size="xl">Logbook</flux:heading>
     <flux:subheading class="mb-4">Important changes — shown as markers on the Overview trend chart</flux:subheading>
 
-    <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-zinc-950/[0.02] dark:border-zinc-800 dark:bg-zinc-900">
         <form wire:submit="addLogEntry" class="mb-4 flex flex-wrap items-end gap-2">
             <flux:input type="date" wire:model="newLogDate" label="Date" class="max-w-44" />
             <flux:input wire:model="newLogNote" label="Change" placeholder="e.g. Moved Thor Metals to position 1" class="min-w-64 flex-1" />

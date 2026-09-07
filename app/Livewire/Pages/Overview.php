@@ -6,6 +6,7 @@ use App\Livewire\Concerns\HasDashboardFilters;
 use App\Models\LogEntry;
 use App\Models\OfferStat;
 use App\Services\CampaignMonitor;
+use App\Services\DashboardCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -39,7 +40,7 @@ class Overview extends Component
     #[Computed]
     public function campaignAlerts(): array
     {
-        return app(CampaignMonitor::class)->silentCampaigns();
+        return app(CampaignMonitor::class)->storedAlerts();
     }
 
     protected function sumRows(Collection $rows): array
@@ -121,45 +122,47 @@ class Overview extends Component
     #[Computed]
     public function monthlyStats(): Collection
     {
-        $min = $this->applySourceFilter(OfferStat::query())->min('stat_date');
+        return app(DashboardCache::class)->remember('monthly:'.$this->source, function () {
+            $min = $this->applySourceFilter(OfferStat::query())->min('stat_date');
 
-        if (! $min) {
-            return collect();
-        }
+            if (! $min) {
+                return collect();
+            }
 
-        $from = CarbonImmutable::parse($min)->startOfMonth();
-        $to = CarbonImmutable::today();
+            $from = CarbonImmutable::parse($min)->startOfMonth();
+            $to = CarbonImmutable::today();
 
-        // Hergebruik de gecorrigeerde dag-aggregatie en bucket per maand.
-        return $this->aggregateByDate($from, $to)
-            ->groupBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->format('Y-m'))
-            ->map(function (Collection $rows, string $month) {
-                $sum = fn (string $k) => (float) $rows->sum($k);
+            // Hergebruik de gecorrigeerde dag-aggregatie en bucket per maand.
+            return $this->aggregateByDate($from, $to)
+                ->groupBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->format('Y-m'))
+                ->map(function (Collection $rows, string $month) {
+                    $sum = fn (string $k) => (float) $rows->sum($k);
 
-                $lpViews = $sum('lp_views');
-                $lpClicks = $sum('lp_clicks');
-                $leads = $sum('leads');
-                $cost = $sum('cost');
-                $revenue = $sum('revenue');
+                    $lpViews = $sum('lp_views');
+                    $lpClicks = $sum('lp_clicks');
+                    $leads = $sum('leads');
+                    $cost = $sum('cost');
+                    $revenue = $sum('revenue');
 
-                return (object) [
-                    'month' => $month,
-                    'lp_views' => $lpViews,
-                    'lp_clicks' => $lpClicks,
-                    'lp_click_cr' => $lpViews > 0 ? $lpClicks / $lpViews : 0,
-                    'lpclick_to_lead' => $lpClicks > 0 ? $leads / $lpClicks : 0,
-                    'leads' => $leads,
-                    'qleads' => $sum('qleads'),
-                    'sales' => $sum('sales'),
-                    'conversions' => $sum('conversions'),
-                    'cost' => $cost,
-                    'revenue' => $revenue,
-                    'profit' => $revenue - $cost,
-                    'roi' => $cost > 0 ? ($revenue - $cost) / $cost : null,
-                ];
-            })
-            ->sortByDesc('month')
-            ->values();
+                    return (object) [
+                        'month' => $month,
+                        'lp_views' => $lpViews,
+                        'lp_clicks' => $lpClicks,
+                        'lp_click_cr' => $lpViews > 0 ? $lpClicks / $lpViews : 0,
+                        'lpclick_to_lead' => $lpClicks > 0 ? $leads / $lpClicks : 0,
+                        'leads' => $leads,
+                        'qleads' => $sum('qleads'),
+                        'sales' => $sum('sales'),
+                        'conversions' => $sum('conversions'),
+                        'cost' => $cost,
+                        'revenue' => $revenue,
+                        'profit' => $revenue - $cost,
+                        'roi' => $cost > 0 ? ($revenue - $cost) / $cost : null,
+                    ];
+                })
+                ->sortByDesc('month')
+                ->values();
+        });
     }
 
     public function metricLabel(string $metric): string

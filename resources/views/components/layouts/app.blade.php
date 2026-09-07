@@ -8,7 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @fluxAppearance
 </head>
-<body class="min-h-screen bg-zinc-50 text-zinc-800 antialiased dark:bg-zinc-950 dark:text-zinc-200">
+<body class="min-h-screen bg-[#f7f7f8] text-zinc-800 antialiased dark:bg-zinc-950 dark:text-zinc-200">
     {{ $slot }}
 
     @fluxScripts

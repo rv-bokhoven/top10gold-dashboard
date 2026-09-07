@@ -48,9 +48,9 @@
                 $showDelta = $kpi['delta'] ?? true;
                 $delta = $showDelta ? $this->delta($kpi['key']) : null;
             @endphp
-            <div class="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-                <div class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ $kpi['label'] }}</div>
-                <div class="mt-0.5 text-xl font-semibold text-zinc-900 dark:text-white">{{ $kpi['value'] }}</div>
+            <div class="rounded-2xl border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-950/[0.02] dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="text-xs font-medium text-zinc-500">{{ $kpi['label'] }}</div>
+                <div class="mt-0.5 text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">{{ $kpi['value'] }}</div>
                 @if (! $showDelta)
                     <div class="mt-0.5 text-xs text-zinc-400">&nbsp;</div>
                 @elseif ($delta === null)
@@ -79,7 +79,7 @@
     </div>
 
     {{-- Trend chart --}}
-    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-950/[0.02] dark:border-zinc-800 dark:bg-zinc-900">
         <div class="mb-3 flex items-center justify-between">
             <flux:heading size="lg">Daily trend</flux:heading>
             <flux:select wire:model.live="metric" size="sm" class="max-w-44">
@@ -96,8 +96,10 @@
             wire:key="chart-{{ $period }}-{{ $from }}-{{ $to }}-{{ $metric }}"
             x-data="{
                 chart: null,
-                init() {
+                async init() {
                     const data = @js($this->chart);
+                    const ApexCharts = await window.loadApexCharts();
+                    if (!this.$el.isConnected) return;
                     this.chart = new ApexCharts(this.$refs.canvas, this.options(data));
                     this.chart.render();
                 },
@@ -137,7 +139,7 @@
     </div>
 
     {{-- Monthly overview (all months, independent of the date filter) --}}
-    <div class="mt-4 rounded-xl border border-zinc-200 bg-white p-5 transition-opacity dark:border-zinc-800 dark:bg-zinc-900" wire:loading.class.delay="opacity-40">
+    <div class="mt-4 rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm shadow-zinc-950/[0.02] transition-opacity dark:border-zinc-800 dark:bg-zinc-900" wire:loading.class.delay="opacity-40">
         <flux:heading size="lg">Monthly overview</flux:heading>
         <flux:subheading class="mb-4">
             All months{{ $source === 'all' ? '' : ' · '.(config('redtrack.sources.'.$source.'.label') ?? $source) }} — compare performance at a glance
@@ -145,7 +147,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+                    <tr class="border-b border-zinc-100 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800">
                         <th class="py-2 pr-3">Month</th>
                         <th class="py-2 pr-3 text-right">LP Views</th>
                         <th class="py-2 pr-3 text-right">LP Clicks</th>
@@ -160,16 +162,16 @@
                 </thead>
                 <tbody>
                     @forelse ($this->monthlyStats as $m)
-                        <tr class="border-b border-zinc-100 last:border-0 dark:border-zinc-800/60">
-                            <td class="py-2 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ \Carbon\CarbonImmutable::parse($m->month.'-01')->format('M Y') }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_views) }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_clicks) }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtPct($m->lp_click_cr) }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->leads) }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->qleads) }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($m->sales) }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtMoney($m->revenue) }}</td>
-                            <td class="py-2 pr-3 text-right tabular-nums text-zinc-500">{{ $fmtMoney($m->cost) }}</td>
+                        <tr class="border-b border-zinc-100/80 last:border-0 dark:border-zinc-800/60">
+                            <td class="py-3 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ \Carbon\CarbonImmutable::parse($m->month.'-01')->format('M Y') }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_views) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_clicks) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtPct($m->lp_click_cr) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->leads) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->qleads) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->sales) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtMoney($m->revenue) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums text-zinc-500">{{ $fmtMoney($m->cost) }}</td>
                             <td @class([
                                 'py-2 pr-3 text-right tabular-nums font-semibold',
                                 'text-zinc-400' => $m->roi === null,

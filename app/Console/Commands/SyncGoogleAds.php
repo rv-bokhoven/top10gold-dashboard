@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\GoogleAdStat;
+use App\Services\DashboardCache;
 use App\Services\GoogleAdsClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -18,7 +19,7 @@ class SyncGoogleAds extends Command
 
     protected $description = 'Synchroniseer Google Ads ad-stats (campagne/adgroup/ad) naar de lokale database';
 
-    public function handle(GoogleAdsClient $client): int
+    public function handle(GoogleAdsClient $client, DashboardCache $cache): int
     {
         [$from, $to] = $this->resolveRange();
 
@@ -96,6 +97,8 @@ class SyncGoogleAds extends Command
                     'conv_qlead', 'conv_sale', 'synced_at', 'updated_at'],
             );
         }
+
+        $cache->clear();
 
         $this->info(count($records).' rijen gesynchroniseerd.');
 

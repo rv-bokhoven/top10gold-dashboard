@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\GoogleAdStat;
+use App\Models\Setting;
 use Carbon\CarbonImmutable;
 use Throwable;
 
@@ -72,5 +73,48 @@ class CampaignMonitor
         }
 
         return $alerts;
+    }
+
+    /**
+     * Bewaar de laatste alert-check voor de Overview. Zo hoeft het openen van
+     * die pagina geen live RedTrack-request meer te doen.
+     *
+     * @param  array<int, array{campaign_id: string, campaign: string, last: ?CarbonImmutable, hours: ?int}>  $alerts
+     */
+    public function storeAlerts(array $alerts): void
+    {
+        $payload = array_map(fn (array $alert) => [
+            'campaign_id' => $alert['campaign_id'],
+            'campaign' => $alert['campaign'],
+            'last' => $alert['last']?->toIso8601String(),
+            'hours' => $alert['hours'],
+        ], $alerts);
+
+        Setting::put('dashboard.campaign_alerts', json_encode($payload));
+    }
+
+    /**
+     * Lees opgeslagen alerts voor de Overview zonder netwerkverzoek.
+     *
+     * @return array<int, array{campaign_id: string, campaign: string, last: ?CarbonImmutable, hours: ?int}>
+     */
+    public function storedAlerts(): array
+    {
+        $payload = json_decode((string) Setting::get('dashboard.campaign_alerts', '[]'), true);
+
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        return collect($payload)
+            ->filter(fn ($alert) => is_array($alert) && filled($alert['campaign_id'] ?? null))
+            ->map(fn (array $alert) => [
+                'campaign_id' => (string) $alert['campaign_id'],
+                'campaign' => (string) ($alert['campaign'] ?? 'Campaign '.$alert['campaign_id']),
+                'last' => filled($alert['last'] ?? null) ? CarbonImmutable::parse($alert['last']) : null,
+                'hours' => isset($alert['hours']) ? (int) $alert['hours'] : null,
+            ])
+            ->values()
+            ->all();
     }
 }

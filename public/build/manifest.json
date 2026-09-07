@@ -51,8 +51,14 @@
     "file": "assets/instrument-sans-600-normal-DMks36a2.woff",
     "src": "_instrument-sans-600-normal-DMks36a2.woff"
   },
+  "node_modules/apexcharts/dist/apexcharts.esm.js": {
+    "file": "assets/apexcharts.esm-Cs8S6ZhS.js",
+    "name": "apexcharts.esm",
+    "src": "node_modules/apexcharts/dist/apexcharts.esm.js",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-D6ZnzXWI.css",
+    "file": "assets/app-Dr-vwMRz.css",
     "name": "app",
     "names": [
       "app.css"
@@ -61,9 +67,12 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-DEpAIZv0.js",
+    "file": "assets/app-WSfY1QER.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true
+    "isEntry": true,
+    "dynamicImports": [
+      "node_modules/apexcharts/dist/apexcharts.esm.js"
+    ]
   }
 }

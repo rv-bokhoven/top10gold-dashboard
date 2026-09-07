@@ -117,13 +117,14 @@ class SendNotifications extends Command
     protected function notifyAlerts(TelegramNotifier $telegram, CampaignMonitor $monitor): void
     {
         $silent = collect($monitor->silentCampaigns())->keyBy('campaign_id');
+        $monitor->storeAlerts($silent->values()->all());
         $state = json_decode((string) Setting::get('telegram.alert_state', '{}'), true) ?: [];
 
         // Nieuw stil → waarschuwen.
         foreach ($silent as $cid => $a) {
             if (! isset($state[$cid])) {
                 $last = $a['last'] ? $a['last']->diffForHumans() : 'unknown';
-                $telegram->send("<b>Campaign silent</b>: ".e($a['campaign'])
+                $telegram->send('<b>Campaign silent</b>: '.e($a['campaign'])
                     ."\nNo lpclick conversion in &gt;".config('redtrack.lpclick_alert_hours', 4)
                     ."h (last: {$last}).");
                 $state[$cid] = $a['campaign'];
@@ -133,7 +134,7 @@ class SendNotifications extends Command
         // Weer actief → herstelmelding.
         foreach ($state as $cid => $name) {
             if (! $silent->has($cid)) {
-                $telegram->send("<b>".e($name)."</b> active again — lpclick conversions are coming in.");
+                $telegram->send('<b>'.e($name).'</b> active again — lpclick conversions are coming in.');
                 unset($state[$cid]);
             }
         }

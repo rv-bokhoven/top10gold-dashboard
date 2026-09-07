@@ -29,20 +29,22 @@
                     ['Avg CPC', $fmtEur($ga['cpc'])],
                     ['Conversions', $fmtInt($ga['conversions'])],
                 ] as [$label, $value])
-                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                        <div class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ $label }}</div>
-                        <div class="mt-1 text-2xl font-semibold text-zinc-900 dark:text-white">{{ $value }}</div>
+                    <div class="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-950/[0.02] dark:border-zinc-800 dark:bg-zinc-900">
+                        <div class="text-xs font-medium text-zinc-500">{{ $label }}</div>
+                        <div class="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">{{ $value }}</div>
                     </div>
                 @endforeach
             </div>
 
             {{-- By campaign --}}
-            <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <div class="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm shadow-zinc-950/[0.02] dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
                 <flux:heading size="lg" class="mb-4">By campaign</flux:heading>
-                <div class="overflow-x-auto">
+                </div>
+                <div class="overflow-x-auto px-5">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+                            <tr class="border-b border-zinc-100 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800">
                                 <th class="py-2 pr-3">Campaign</th>
                                 <th class="py-2 pr-3 text-right">Impr.</th>
                                 <th class="py-2 pr-3 text-right">Clicks</th>
@@ -56,16 +58,16 @@
                         </thead>
                         <tbody>
                             @foreach ($this->googleAdsByCampaign as $c)
-                                <tr class="border-b border-zinc-100 last:border-0 dark:border-zinc-800/60">
-                                    <td class="py-2 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ $c->campaign_name ?? '—' }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->impressions) }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->clicks) }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtPct($c->ctr) }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cost) }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtEur($c->cpc) }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lpclick) }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lead) }}</td>
-                                    <td class="py-2 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_qlead) }}</td>
+                                <tr class="border-b border-zinc-100/80 last:border-0 dark:border-zinc-800/60">
+                                    <td class="py-3 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ $c->campaign_name ?? '—' }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->impressions) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->clicks) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtPct($c->ctr) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtEur($c->cost) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtEur($c->cpc) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lpclick) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lead) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_qlead) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

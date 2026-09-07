@@ -4,6 +4,7 @@ namespace App\Livewire\Pages;
 
 use App\Livewire\Concerns\HasDashboardFilters;
 use App\Models\OfferStat;
+use App\Services\DashboardCache;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -37,26 +38,30 @@ class Offers extends Component
     {
         [$from, $to] = $this->range();
 
-        $rows = $this->applySourceFilter(OfferStat::query())
-            ->offers()
-            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
-            ->selectRaw('offer_id, MAX(offer_title) as offer_title,
-                SUM(lp_clicks) as lp_clicks, SUM(leads) as leads,
-                SUM(qleads) as qleads, SUM(sales) as sales,
-                SUM(conversions) as conversions, SUM(clicks) as clicks,
-                SUM(cost) as cost, SUM(revenue) as revenue')
-            ->groupBy('offer_id')
-            ->get();
+        $key = implode(':', ['offers', $this->source, $from->toDateString(), $to->toDateString()]);
 
-        // Handmatige correcties toepassen vóór de CR-berekening.
-        $rows = $this->mergeOfferCorrections($rows, $from, $to)
-            ->map(function ($r) {
-                $r->lpclick_to_lead = $r->lp_clicks > 0 ? $r->leads / $r->lp_clicks : 0;
-                $r->lead_to_qlead = $r->leads > 0 ? $r->qleads / $r->leads : 0;
-                $r->cpl = $r->leads > 0 ? $r->cost / $r->leads : 0;
+        $rows = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+            $rows = $this->applySourceFilter(OfferStat::query())
+                ->offers()
+                ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+                ->selectRaw('offer_id, MAX(offer_title) as offer_title,
+                    SUM(lp_clicks) as lp_clicks, SUM(leads) as leads,
+                    SUM(qleads) as qleads, SUM(sales) as sales,
+                    SUM(conversions) as conversions, SUM(clicks) as clicks,
+                    SUM(cost) as cost, SUM(revenue) as revenue')
+                ->groupBy('offer_id')
+                ->get();
 
-                return $r;
-            });
+            // Handmatige correcties toepassen vóór de CR-berekening.
+            return $this->mergeOfferCorrections($rows, $from, $to)
+                ->map(function ($r) {
+                    $r->lpclick_to_lead = $r->lp_clicks > 0 ? $r->leads / $r->lp_clicks : 0;
+                    $r->lead_to_qlead = $r->leads > 0 ? $r->qleads / $r->leads : 0;
+                    $r->cpl = $r->leads > 0 ? $r->cost / $r->leads : 0;
+
+                    return $r;
+                });
+        });
 
         return $rows
             ->sortBy(fn ($r) => $r->{$this->offerSort} ?? 0, SORT_REGULAR, $this->offerDir === 'desc')

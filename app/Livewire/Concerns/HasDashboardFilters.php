@@ -5,7 +5,9 @@ namespace App\Livewire\Concerns;
 use App\Models\OfferStat;
 use App\Models\Setting;
 use App\Models\StatCorrection;
+use App\Services\DashboardCache;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Computed;
@@ -30,7 +32,7 @@ trait HasDashboardFilters
     ];
 
     #[Url]
-    public string $period = 'last_7';
+    public string $period = 'this_month';
 
     #[Url]
     public ?string $from = null;
@@ -47,9 +49,11 @@ trait HasDashboardFilters
 
     public ?string $lastSyncMessage = null;
 
+    protected ?float $resolvedFxRate = null;
+
     public function mountHasDashboardFilters(): void
     {
-        $this->from ??= CarbonImmutable::today()->subDays(6)->toDateString();
+        $this->from ??= CarbonImmutable::today()->startOfMonth()->toDateString();
         $this->to ??= CarbonImmutable::today()->toDateString();
     }
 
@@ -85,7 +89,10 @@ trait HasDashboardFilters
     /** Actuele EUR→USD-koers (USD per 1 EUR). */
     public function fxRate(): float
     {
-        return (float) Setting::get('fx.eur_usd', config('currency.eur_usd_fallback', 1.08));
+        return $this->resolvedFxRate ??= (float) Setting::get(
+            'fx.eur_usd',
+            config('currency.eur_usd_fallback', 1.08),
+        );
     }
 
     /**
@@ -109,6 +116,7 @@ trait HasDashboardFilters
     public function refreshData(): void
     {
         Artisan::call('redtrack:sync');
+        unset($this->dailyStats, $this->syncedAt);
         $this->lastSyncMessage = 'Updated at '.now()->format('H:i');
         $this->dispatch('stats-refreshed');
     }
@@ -116,7 +124,10 @@ trait HasDashboardFilters
     #[Computed]
     public function syncedAt(): ?CarbonImmutable
     {
-        $value = OfferStat::max('synced_at');
+        $value = app(DashboardCache::class)->remember(
+            'synced-at',
+            fn () => OfferStat::max('synced_at'),
+        );
 
         return $value ? CarbonImmutable::parse($value) : null;
     }
@@ -133,8 +144,8 @@ trait HasDashboardFilters
     /**
      * Beperk een OfferStat-query tot de gekozen source ('all' = geen filter).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function applySourceFilter($query)
     {
@@ -146,19 +157,28 @@ trait HasDashboardFilters
 
     protected function aggregateByDate(CarbonImmutable $from, CarbonImmutable $to): Collection
     {
-        $rows = $this->applySourceFilter(OfferStat::query())
-            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
-            ->selectRaw('stat_date,
-                SUM(lp_views) as lp_views, SUM(lp_clicks) as lp_clicks,
-                SUM(clicks) as clicks, SUM(leads) as leads,
-                SUM(qleads) as qleads, SUM(sales) as sales,
-                SUM(conversions) as conversions, SUM(cost) as cost,
-                SUM(revenue) as revenue')
-            ->groupBy('stat_date')
-            ->orderBy('stat_date')
-            ->get();
+        $key = implode(':', [
+            'daily',
+            $this->source,
+            $from->toDateString(),
+            $to->toDateString(),
+        ]);
 
-        return $this->mergeDateCorrections($rows, $from, $to);
+        return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+            $rows = $this->applySourceFilter(OfferStat::query())
+                ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+                ->selectRaw('stat_date,
+                    SUM(lp_views) as lp_views, SUM(lp_clicks) as lp_clicks,
+                    SUM(clicks) as clicks, SUM(leads) as leads,
+                    SUM(qleads) as qleads, SUM(sales) as sales,
+                    SUM(conversions) as conversions, SUM(cost) as cost,
+                    SUM(revenue) as revenue')
+                ->groupBy('stat_date')
+                ->orderBy('stat_date')
+                ->get();
+
+            return $this->mergeDateCorrections($rows, $from, $to);
+        });
     }
 
     /** Handmatige correcties binnen de periode, gefilterd op de gekozen source. */
@@ -238,6 +258,44 @@ trait HasDashboardFilters
         }
 
         return $byOffer->values();
+    }
+
+    /** Tel correcties op bij de dagelijkse rijen van één offer. */
+    public function mergeOfferDateCorrections(
+        Collection $rows,
+        CarbonImmutable $from,
+        CarbonImmutable $to,
+        string $offerId,
+    ): Collection {
+        $corrections = $this->applySourceFilter(StatCorrection::query())
+            ->where('offer_id', $offerId)
+            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+            ->get();
+
+        if ($corrections->isEmpty()) {
+            return $rows;
+        }
+
+        $byDate = $rows->keyBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->toDateString());
+
+        foreach ($corrections as $c) {
+            $key = $c->stat_date->toDateString();
+            $row = $byDate->get($key);
+
+            if (! $row) {
+                $row = new OfferStat(['stat_date' => $key, 'offer_id' => $offerId]);
+                foreach (['lp_views', 'lp_clicks', 'clicks', 'leads', 'qleads', 'sales', 'conversions', 'cost', 'revenue'] as $field) {
+                    $row->{$field} = 0;
+                }
+                $byDate->put($key, $row);
+            }
+
+            $this->addCorrectionDeltas($row, $c);
+        }
+
+        return $byDate->values()
+            ->sortBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->toDateString())
+            ->values();
     }
 
     /** Tel de deltas van één correctie op bij een geaggregeerde rij. */
