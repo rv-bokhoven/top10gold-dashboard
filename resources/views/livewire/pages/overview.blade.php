@@ -152,6 +152,7 @@
                         <th class="py-2 pr-3 text-right">LP Views</th>
                         <th class="py-2 pr-3 text-right">LP Clicks</th>
                         <th class="py-2 pr-3 text-right">CR</th>
+                        <th class="py-2 pr-3 text-right">LPClick → Lead</th>
                         <th class="py-2 pr-3 text-right">Leads</th>
                         <th class="py-2 pr-3 text-right">Q-Leads</th>
                         <th class="py-2 pr-3 text-right">Sales</th>
@@ -167,6 +168,7 @@
                             <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_views) }}</td>
                             <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->lp_clicks) }}</td>
                             <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtPct($m->lp_click_cr) }}</td>
+                            <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtPct($m->lpclick_to_lead) }}</td>
                             <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->leads) }}</td>
                             <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->qleads) }}</td>
                             <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($m->sales) }}</td>
@@ -180,7 +182,7 @@
                             ])>{{ $m->roi === null ? '—' : $fmtPct($m->roi) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="py-6 text-center text-zinc-400">No data yet.</td></tr>
+                        <tr><td colspan="11" class="py-6 text-center text-zinc-400">No data yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
