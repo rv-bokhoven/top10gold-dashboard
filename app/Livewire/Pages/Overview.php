@@ -122,11 +122,11 @@ class Overview extends Component
     #[Computed]
     public function monthlyStats(): Collection
     {
-        return app(DashboardCache::class)->remember('monthly:'.$this->source, function () {
+        $cached = app(DashboardCache::class)->remember('monthly:'.$this->source, function () {
             $min = $this->applySourceFilter(OfferStat::query())->min('stat_date');
 
             if (! $min) {
-                return collect();
+                return [];
             }
 
             $from = CarbonImmutable::parse($min)->startOfMonth();
@@ -144,7 +144,7 @@ class Overview extends Component
                     $cost = $sum('cost');
                     $revenue = $sum('revenue');
 
-                    return (object) [
+                    return [
                         'month' => $month,
                         'lp_views' => $lpViews,
                         'lp_clicks' => $lpClicks,
@@ -161,8 +161,11 @@ class Overview extends Component
                     ];
                 })
                 ->sortByDesc('month')
-                ->values();
+                ->values()
+                ->all();
         });
+
+        return collect($cached)->map(fn (array $row) => (object) $row)->values();
     }
 
     public function metricLabel(string $metric): string

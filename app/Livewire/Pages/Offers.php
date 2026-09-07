@@ -40,7 +40,7 @@ class Offers extends Component
 
         $key = implode(':', ['offers', $this->source, $from->toDateString(), $to->toDateString()]);
 
-        $rows = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+        $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
             $rows = $this->applySourceFilter(OfferStat::query())
                 ->offers()
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
@@ -53,7 +53,7 @@ class Offers extends Component
                 ->get();
 
             // Handmatige correcties toepassen vóór de CR-berekening.
-            return $this->mergeOfferCorrections($rows, $from, $to)
+            $rows = $this->mergeOfferCorrections($rows, $from, $to)
                 ->map(function ($r) {
                     $r->lpclick_to_lead = $r->lp_clicks > 0 ? $r->leads / $r->lp_clicks : 0;
                     $r->lead_to_qlead = $r->leads > 0 ? $r->qleads / $r->leads : 0;
@@ -61,7 +61,11 @@ class Offers extends Component
 
                     return $r;
                 });
+
+            return $this->serializeStatRows($rows);
         });
+
+        $rows = $this->restoreStatRows($cached);
 
         return $rows
             ->sortBy(fn ($r) => $r->{$this->offerSort} ?? 0, SORT_REGULAR, $this->offerDir === 'desc')

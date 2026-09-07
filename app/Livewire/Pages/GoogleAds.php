@@ -55,7 +55,7 @@ class GoogleAds extends Component
 
         $key = implode(':', ['google-campaigns', $from->toDateString(), $to->toDateString()]);
 
-        return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+        $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
             return GoogleAdStat::query()
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
                 ->selectRaw('campaign_id, MAX(campaign_name) as campaign_name,
@@ -66,15 +66,33 @@ class GoogleAds extends Component
                 ->groupBy('campaign_id')
                 ->get()
                 ->map(function ($r) {
-                    $r->ctr = $r->impressions > 0 ? $r->clicks / $r->impressions : 0;
-                    $r->cpc = $r->clicks > 0 ? $r->cost / $r->clicks : 0;
-                    $r->cpa = $r->conversions > 0 ? $r->cost / $r->conversions : 0;
+                    $impressions = (int) $r->impressions;
+                    $clicks = (int) $r->clicks;
+                    $cost = (float) $r->cost;
+                    $conversions = (float) $r->conversions;
 
-                    return $r;
+                    return [
+                        'campaign_id' => (string) $r->campaign_id,
+                        'campaign_name' => $r->campaign_name,
+                        'impressions' => $impressions,
+                        'clicks' => $clicks,
+                        'cost' => $cost,
+                        'conversions' => $conversions,
+                        'conv_lpclick' => (float) $r->conv_lpclick,
+                        'conv_lead' => (float) $r->conv_lead,
+                        'conv_qlead' => (float) $r->conv_qlead,
+                        'conv_sale' => (float) $r->conv_sale,
+                        'ctr' => $impressions > 0 ? $clicks / $impressions : 0,
+                        'cpc' => $clicks > 0 ? $cost / $clicks : 0,
+                        'cpa' => $conversions > 0 ? $cost / $conversions : 0,
+                    ];
                 })
                 ->sortByDesc('cost')
-                ->values();
+                ->values()
+                ->all();
         });
+
+        return collect($cached)->map(fn (array $row) => (object) $row)->values();
     }
 
     public function render()

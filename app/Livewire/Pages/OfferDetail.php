@@ -50,7 +50,7 @@ class OfferDetail extends Component
             $to->toDateString(),
         ]);
 
-        return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+        $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
             $rows = $this->applySourceFilter(OfferStat::query())
                 ->offers()
                 ->where('offer_id', $this->offerId)
@@ -63,14 +63,18 @@ class OfferDetail extends Component
                 ->orderBy('stat_date')
                 ->get();
 
-            return $this->mergeOfferDateCorrections($rows, $from, $to, $this->offerId)
+            $rows = $this->mergeOfferDateCorrections($rows, $from, $to, $this->offerId)
                 ->map(function ($row) {
                     $row->lpclick_to_lead = $row->lp_clicks > 0 ? $row->leads / $row->lp_clicks : 0;
                     $row->lead_to_qlead = $row->leads > 0 ? $row->qleads / $row->leads : 0;
 
                     return $row;
                 });
+
+            return $this->serializeStatRows($rows);
         });
+
+        return $this->restoreStatRows($cached);
     }
 
     #[Computed]

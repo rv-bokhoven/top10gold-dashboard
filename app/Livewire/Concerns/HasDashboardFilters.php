@@ -164,7 +164,7 @@ trait HasDashboardFilters
             $to->toDateString(),
         ]);
 
-        return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+        $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
             $rows = $this->applySourceFilter(OfferStat::query())
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
                 ->selectRaw('stat_date,
@@ -177,8 +177,10 @@ trait HasDashboardFilters
                 ->orderBy('stat_date')
                 ->get();
 
-            return $this->mergeDateCorrections($rows, $from, $to);
+            return $this->serializeStatRows($this->mergeDateCorrections($rows, $from, $to));
         });
+
+        return $this->restoreStatRows($cached);
     }
 
     /** Handmatige correcties binnen de periode, gefilterd op de gekozen source. */
@@ -296,6 +298,42 @@ trait HasDashboardFilters
         return $byDate->values()
             ->sortBy(fn ($r) => CarbonImmutable::parse((string) $r->stat_date)->toDateString())
             ->values();
+    }
+
+    /**
+     * Maak geaggregeerde OfferStat-rijen veilig voor de database-cache.
+     *
+     * @return array<int, array<string, string|int|float|null>>
+     */
+    public function serializeStatRows(Collection $rows): array
+    {
+        return $rows->map(function ($row) {
+            $date = $row->stat_date ?? null;
+
+            return [
+                'stat_date' => $date instanceof \DateTimeInterface ? $date->format('Y-m-d') : (string) $date,
+                'offer_id' => isset($row->offer_id) ? (string) $row->offer_id : null,
+                'offer_title' => isset($row->offer_title) ? (string) $row->offer_title : null,
+                'lp_views' => (int) ($row->lp_views ?? 0),
+                'lp_clicks' => (int) ($row->lp_clicks ?? 0),
+                'clicks' => (int) ($row->clicks ?? 0),
+                'leads' => (int) ($row->leads ?? 0),
+                'qleads' => (int) ($row->qleads ?? 0),
+                'sales' => (int) ($row->sales ?? 0),
+                'conversions' => (int) ($row->conversions ?? 0),
+                'cost' => (float) ($row->cost ?? 0),
+                'revenue' => (float) ($row->revenue ?? 0),
+                'lpclick_to_lead' => isset($row->lpclick_to_lead) ? (float) $row->lpclick_to_lead : null,
+                'lead_to_qlead' => isset($row->lead_to_qlead) ? (float) $row->lead_to_qlead : null,
+                'cpl' => isset($row->cpl) ? (float) $row->cpl : null,
+            ];
+        })->values()->all();
+    }
+
+    /** @param array<int, array<string, string|int|float|null>> $rows */
+    public function restoreStatRows(array $rows): Collection
+    {
+        return collect($rows)->map(fn (array $row) => (object) $row)->values();
     }
 
     /** Tel de deltas van één correctie op bij een geaggregeerde rij. */
