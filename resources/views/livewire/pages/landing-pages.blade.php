@@ -1,46 +1,47 @@
-<div>
-    <div class="mb-4 flex items-center justify-between gap-4">
+<div class="flex flex-col gap-4 lg:gap-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-            <flux:heading size="xl">Landing pages</flux:heading>
-            <flux:subheading>Final URLs from the live ads — uptime check</flux:subheading>
+            <h1 class="text-base font-normal text-fg">Landingspagina's</h1>
+            <p class="text-xs text-subtle">Final URLs uit de live ads — uptime-check</p>
         </div>
-        <flux:button wire:click="checkLandingPages" wire:loading.attr="disabled" wire:target="checkLandingPages" icon="arrow-path" size="sm">
-            <span wire:loading.remove wire:target="checkLandingPages">Check now</span>
-            <span wire:loading wire:target="checkLandingPages">Checking…</span>
-        </flux:button>
+        <button type="button" wire:click="checkLandingPages" wire:loading.attr="disabled" wire:target="checkLandingPages"
+            class="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm text-fg transition hover:bg-elevated">
+            <x-lucide name="refresh" class="size-4 text-muted" wire:loading.class="animate-spin" wire:target="checkLandingPages" />
+            <span wire:loading.remove wire:target="checkLandingPages">Nu checken</span>
+            <span wire:loading wire:target="checkLandingPages">Bezig…</span>
+        </button>
     </div>
 
-    <div class="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm shadow-zinc-950/[0.02] transition-opacity dark:border-zinc-800 dark:bg-zinc-900"
-        wire:loading.class.delay="opacity-40" wire:target="checkLandingPages">
-        <div class="overflow-x-auto px-5">
-            <table class="w-full text-sm">
+    <div class="rounded-lg bg-surface p-4 transition-opacity sm:p-5" wire:loading.class.delay="opacity-40" wire:target="checkLandingPages">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[640px] text-sm">
                 <thead>
-                    <tr class="border-b border-zinc-100 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800">
-                        <th class="py-2 pr-3">Status</th>
-                        <th class="py-2 pr-3">Landing page</th>
-                        <th class="py-2 pr-3">Campaigns</th>
-                        <th class="py-2 pr-3 text-right">Checked</th>
+                    <tr class="border-b border-border text-left text-xs text-subtle">
+                        <th class="py-2 pr-3 font-normal">Status</th>
+                        <th class="py-2 pr-3 font-normal">Landingspagina</th>
+                        <th class="py-2 pr-3 font-normal">Campagnes</th>
+                        <th class="py-2 pr-3 text-right font-normal">Gecheckt</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($this->landingPages as $page)
-                        <tr class="border-b border-zinc-100/80 last:border-0 dark:border-zinc-800/60">
+                        <tr class="border-b border-border/60 last:border-0">
                             <td class="py-3 pr-3">
                                 @if ($page->ok)
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">● Online{{ $page->status_code ? ' '.$page->status_code : '' }}</span>
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-elevated px-2 py-0.5 text-xs font-medium text-positive">● Online{{ $page->status_code ? ' '.$page->status_code : '' }}</span>
                                 @else
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">● {{ $page->status_code ?: 'Error' }}</span>
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-elevated px-2 py-0.5 text-xs font-medium text-negative">● {{ $page->status_code ?: 'Fout' }}</span>
                                 @endif
                             </td>
                             <td class="py-3 pr-3">
-                                <a href="{{ $page->url }}" target="_blank" rel="noopener" class="text-zinc-800 underline-offset-2 hover:underline dark:text-zinc-200">{{ \Illuminate\Support\Str::after($page->url, 'top10.compare') ?: $page->url }}</a>
-                                @if ($page->error)<div class="text-xs text-rose-500">{{ \Illuminate\Support\Str::limit($page->error, 80) }}</div>@endif
+                                <a href="{{ $page->url }}" target="_blank" rel="noopener" class="text-fg underline-offset-2 hover:underline">{{ \Illuminate\Support\Str::after($page->url, 'top10.compare') ?: $page->url }}</a>
+                                @if ($page->error)<div class="text-xs text-negative">{{ \Illuminate\Support\Str::limit($page->error, 80) }}</div>@endif
                             </td>
-                            <td class="py-3 pr-3 text-zinc-500">{{ $page->campaigns }}</td>
-                            <td class="py-3 pr-3 text-right text-zinc-400">{{ $page->checked_at?->diffForHumans() }}</td>
+                            <td class="py-3 pr-3 text-muted">{{ $page->campaigns }}</td>
+                            <td class="py-3 pr-3 text-right text-subtle">{{ $page->checked_at?->locale('nl')->diffForHumans() }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="py-6 text-center text-zinc-400">Not checked yet. Click <strong>Check now</strong> (requires the Google Ads connection).</td></tr>
+                        <tr><td colspan="4" class="py-6 text-center text-subtle">Nog niet gecheckt. Klik <strong>Nu checken</strong> (vereist de Google Ads-koppeling).</td></tr>
                     @endforelse
                 </tbody>
             </table>

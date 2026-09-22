@@ -21,14 +21,14 @@ use Livewire\Attributes\Url;
 trait HasDashboardFilters
 {
     public const PERIODS = [
-        'today' => 'Today',
-        'yesterday' => 'Yesterday',
-        'last_7' => 'Last 7 days',
-        'this_week' => 'This week',
-        'last_week' => 'Last week',
-        'this_month' => 'This month',
-        'last_month' => 'Last month',
-        'custom' => 'Custom',
+        'today' => 'Vandaag',
+        'yesterday' => 'Gisteren',
+        'this_week' => 'Deze week',
+        'last_week' => 'Vorige week',
+        'this_month' => 'Deze maand',
+        'last_month' => 'Vorige maand',
+        'this_year' => 'Dit jaar',
+        'custom' => 'Aangepast',
     ];
 
     #[Url]
@@ -41,7 +41,7 @@ trait HasDashboardFilters
     public ?string $to = null;
 
     #[Url]
-    public string $currency = 'USD';
+    public string $currency = 'EUR';
 
     // Traffic-source filter: 'all' of een key uit config('redtrack.sources').
     #[Url]
@@ -70,6 +70,8 @@ trait HasDashboardFilters
             'last_week' => [$today->subWeek()->startOfWeek(), $today->subWeek()->endOfWeek()],
             'this_month' => [$today->startOfMonth(), $today],
             'last_month' => [$today->subMonth()->startOfMonth(), $today->subMonth()->endOfMonth()],
+            'this_year' => [$today->startOfYear(), $today],
+            'last_7' => [$today->subDays(6), $today],
             default => [
                 CarbonImmutable::parse($this->from ?: $today->toDateString()),
                 CarbonImmutable::parse($this->to ?: $today->toDateString()),
@@ -108,9 +110,52 @@ trait HasDashboardFilters
             $value = $native === 'EUR' ? $value * $rate : $value / $rate;
         }
 
+        // nl-NL: EUR toont 0 decimalen vanaf 100, anders 2.
+        $decimals = ($this->currency === 'EUR' && abs($value) >= 100) ? 0 : 2;
         $symbol = $this->currency === 'EUR' ? '€' : '$';
 
-        return $symbol.number_format($value, 2);
+        return $symbol.' '.number_format($value, $decimals, ',', '.');
+    }
+
+    /** Numerieke geldwaarde in de gekozen valuta (voor grafiek-series). */
+    public function moneyValue($value, string $native = 'USD'): float
+    {
+        $value = (float) $value;
+        $rate = $this->fxRate();
+
+        if ($native !== $this->currency && $rate > 0) {
+            $value = $native === 'EUR' ? $value * $rate : $value / $rate;
+        }
+
+        return $value;
+    }
+
+    /** nl-NL geheel getal, bijv. 230.266. */
+    public function nlInt($value): string
+    {
+        return number_format((float) $value, 0, ',', '.');
+    }
+
+    /** nl-NL percentage, bijv. 10,1%. */
+    public function nlPct($value, int $decimals = 1): string
+    {
+        return number_format((float) $value * 100, $decimals, ',', '.').'%';
+    }
+
+    /** Compacte telling voor de funnel: 230K / 23,2K / 890. */
+    public function compactCount($value): string
+    {
+        $value = (float) $value;
+
+        if (abs($value) >= 100000) {
+            return number_format($value / 1000, 0, ',', '.').'K';
+        }
+
+        if (abs($value) >= 1000) {
+            return number_format($value / 1000, 1, ',', '.').'K';
+        }
+
+        return number_format($value, 0, ',', '.');
     }
 
     public function refreshData(): void

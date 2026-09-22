@@ -58,13 +58,13 @@ class OfferDetailTest extends TestCase
             ->whereBetween('stat_date', [CarbonImmutable::today()->startOfMonth()->toDateString(), CarbonImmutable::today()->toDateString()])
             ->count());
 
-        $component = Livewire::test(OfferDetail::class, ['offerId' => 'priority-gold']);
+        $component = Livewire::test(OfferDetail::class, ['offerId' => 'priority-gold'])->set('currency', 'USD');
         $this->assertSame(20, (int) $component->instance()->dailyOfferStats->first()->lp_clicks);
 
         $component
             ->assertSee('Priority Gold')
-            ->assertSee('Daily breakdown')
-            ->assertSee('25.0%')
-            ->assertSee('$120.00');
+            ->assertSee('Per dag')
+            ->assertSee('25,0%')
+            ->assertSee('$ 120,00');
     }
 }

@@ -1,73 +1,57 @@
-@php
-    $fmtInt = fn ($v) => number_format((float) $v, 0);
-    $fmtPct = fn ($v) => number_format((float) $v * 100, 1).'%';
-    $fmtEur = fn ($v) => $this->money($v, 'EUR');
-    $ga = $this->googleAdsTotals;
-@endphp
+@php $ga = $this->googleAdsTotals; @endphp
 
-<div>
-    <flux:heading size="xl" class="mb-2">Google Ads</flux:heading>
-
+<div class="flex flex-col gap-4 lg:gap-5">
     @include('partials.dashboard-filters')
 
     <div class="transition-opacity" wire:loading.class.delay="opacity-40">
-        <flux:subheading class="mb-4">{{ $this->googleAdsByCampaign->count() }} {{ \Illuminate\Support\Str::plural('campaign', $this->googleAdsByCampaign->count()) }}</flux:subheading>
-
         @if ($ga['impressions'] === 0 && $ga['clicks'] === 0)
-            <div class="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-                No Google Ads data for this period yet. Connect the Google Ads API
-                (<code>GOOGLE_ADS_*</code> in <code>.env</code>) and run <code>php artisan google-ads:sync --all</code>.
+            <div class="rounded-lg bg-surface p-6 text-center text-sm text-muted">
+                Nog geen Google Ads-data voor deze periode. Koppel de Google Ads API
+                (<code>GOOGLE_ADS_*</code> in <code>.env</code>) en draai <code>php artisan google-ads:sync --all</code>.
             </div>
         @else
-            {{-- Summary cards --}}
-            <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {{-- Samenvatting --}}
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                 @foreach ([
-                    ['Impressions', $fmtInt($ga['impressions'])],
-                    ['Clicks', $fmtInt($ga['clicks'])],
-                    ['CTR', $fmtPct($ga['ctr'])],
-                    ['Cost', $fmtEur($ga['cost'])],
-                    ['Avg CPC', $fmtEur($ga['cpc'])],
-                    ['Conversions', $fmtInt($ga['conversions'])],
+                    ['Impressies', $this->nlInt($ga['impressions'])],
+                    ['Clicks', $this->nlInt($ga['clicks'])],
+                    ['CTR', $this->nlPct($ga['ctr'])],
+                    ['Cost', $this->money($ga['cost'], 'EUR')],
+                    ['Gem. CPC', $this->money($ga['cpc'], 'EUR')],
+                    ['Conversies', $this->nlInt($ga['conversions'])],
                 ] as [$label, $value])
-                    <div class="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-950/[0.02] dark:border-zinc-800 dark:bg-zinc-900">
-                        <div class="text-xs font-medium text-zinc-500">{{ $label }}</div>
-                        <div class="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">{{ $value }}</div>
+                    <div class="rounded-md bg-surface px-3 py-2.5">
+                        <div class="text-xs text-muted">{{ $label }}</div>
+                        <div class="mt-0.5 text-sm font-medium tabular-nums text-fg sm:text-base">{{ $value }}</div>
                     </div>
                 @endforeach
             </div>
 
-            {{-- By campaign --}}
-            <div class="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm shadow-zinc-950/[0.02] dark:border-zinc-800 dark:bg-zinc-900">
-                <div class="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-                <flux:heading size="lg" class="mb-4">By campaign</flux:heading>
-                </div>
-                <div class="overflow-x-auto px-5">
-                    <table class="w-full text-sm">
+            {{-- Per campagne --}}
+            <div class="rounded-lg bg-surface p-4 sm:p-5">
+                <h2 class="mb-4 text-base font-medium text-fg">Per campagne</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[760px] text-sm">
                         <thead>
-                            <tr class="border-b border-zinc-100 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800">
-                                <th class="py-2 pr-3">Campaign</th>
-                                <th class="py-2 pr-3 text-right">Impr.</th>
-                                <th class="py-2 pr-3 text-right">Clicks</th>
-                                <th class="py-2 pr-3 text-right">CTR</th>
-                                <th class="py-2 pr-3 text-right">Cost</th>
-                                <th class="py-2 pr-3 text-right">CPC</th>
-                                <th class="py-2 pr-3 text-right">LP-clicks</th>
-                                <th class="py-2 pr-3 text-right">Leads</th>
-                                <th class="py-2 pr-3 text-right">Q-leads</th>
+                            <tr class="border-b border-border text-left text-xs text-subtle">
+                                <th class="py-2 pr-3 font-normal">Campagne</th>
+                                @foreach (['Impr.', 'Clicks', 'CTR', 'Cost', 'CPC', 'LP-clicks', 'Leads', 'Q-leads'] as $h)
+                                    <th class="py-2 pr-3 text-right font-normal">{{ $h }}</th>
+                                @endforeach
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($this->googleAdsByCampaign as $c)
-                                <tr class="border-b border-zinc-100/80 last:border-0 dark:border-zinc-800/60">
-                                    <td class="py-3 pr-3 font-medium text-zinc-800 dark:text-zinc-200">{{ $c->campaign_name ?? '—' }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->impressions) }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->clicks) }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtPct($c->ctr) }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtEur($c->cost) }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtEur($c->cpc) }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lpclick) }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_lead) }}</td>
-                                    <td class="py-3 pr-3 text-right tabular-nums">{{ $fmtInt($c->conv_qlead) }}</td>
+                                <tr class="border-b border-border/60 last:border-0">
+                                    <td class="py-3 pr-3 font-medium text-fg">{{ $c->campaign_name ?? '—' }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-muted">{{ $this->nlInt($c->impressions) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-muted">{{ $this->nlInt($c->clicks) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-muted">{{ $this->nlPct($c->ctr) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-fg">{{ $this->money($c->cost, 'EUR') }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-muted">{{ $this->money($c->cpc, 'EUR') }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-muted">{{ $this->nlInt($c->conv_lpclick) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-fg">{{ $this->nlInt($c->conv_lead) }}</td>
+                                    <td class="py-3 pr-3 text-right tabular-nums text-fg">{{ $this->nlInt($c->conv_qlead) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

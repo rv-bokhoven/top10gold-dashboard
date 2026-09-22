@@ -1,69 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl" data-flux-appearance="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? config('app.name') }}</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @fluxAppearance
     <style>[x-cloak]{display:none!important;}</style>
 </head>
-<body class="min-h-screen bg-[#f7f7f8] text-zinc-800 antialiased dark:bg-zinc-950 dark:text-zinc-200">
+<body class="min-h-screen bg-bg font-sans text-fg antialiased">
     @php
         $nav = [
-            ['route' => 'dashboard', 'label' => 'Overview', 'icon' => 'chart-bar'],
-            ['route' => 'offers', 'label' => 'Offers', 'icon' => 'rectangle-stack'],
+            ['route' => 'dashboard', 'label' => 'Overzicht', 'icon' => 'layout-grid'],
+            ['route' => 'offers', 'label' => 'Offers', 'icon' => 'panels-top-left'],
             ['route' => 'google-ads', 'label' => 'Google Ads', 'icon' => 'megaphone'],
-            ['route' => 'landing-pages', 'label' => 'Landing pages', 'icon' => 'globe-alt'],
-            ['route' => 'logbook', 'label' => 'Logbook', 'icon' => 'book-open'],
+            ['route' => 'landing-pages', 'label' => "Landingspagina's", 'icon' => 'globe'],
+            ['route' => 'logbook', 'label' => 'Logboek', 'icon' => 'book-open'],
         ];
+        $navLabels = collect($nav)->pluck('label')->map(fn ($l) => strtolower($l))->values()->toJson();
     @endphp
 
-    <div x-data="{ open: false }" class="flex min-h-screen">
-        {{-- Sidebar --}}
+    <div
+        x-data="{
+            collapsed: $persist(false).as('pulse.collapsed'),
+            search: false,
+            mobile: false,
+            q: '',
+            labels: {{ $navLabels }},
+            matches(label) { return this.q === '' || label.toLowerCase().includes(this.q.toLowerCase()); },
+            get visible() { return this.labels.filter(l => this.matches(l)).length; },
+        }"
+        class="flex min-h-screen"
+    >
+        {{-- Desktop sidebar --}}
         <aside
-            :class="open ? 'translate-x-0' : '-translate-x-full'"
-            class="fixed inset-y-0 left-0 z-40 flex w-60 transform flex-col border-r border-zinc-200/80 bg-[#fbfbfb] p-4 transition-transform dark:border-zinc-800 dark:bg-zinc-900 lg:static lg:translate-x-0"
+            :class="collapsed ? 'w-16' : 'w-64'"
+            class="hidden shrink-0 flex-col bg-sidebar transition-[width] duration-200 lg:flex"
         >
-            <div class="mb-6 px-2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-white">
-                {{ config('app.name') }}
+            {{-- Top: compass + controls --}}
+            <div class="flex h-14 items-center gap-1 px-3" :class="collapsed && 'flex-col justify-center gap-2 py-2'">
+                <div class="flex size-11 items-center justify-center text-fg">
+                    <x-lucide name="compass" class="size-5" />
+                </div>
+                <div class="ml-auto flex items-center" :class="collapsed && 'ml-0'">
+                    <button type="button" x-show="!collapsed" @click="search = !search; q = ''"
+                        class="flex size-11 items-center justify-center rounded-md text-muted transition hover:bg-elevated"
+                        title="Zoeken">
+                        <x-lucide name="search" class="size-5" />
+                    </button>
+                    <button type="button" @click="collapsed = !collapsed"
+                        class="flex size-11 items-center justify-center rounded-md text-muted transition hover:bg-elevated"
+                        title="Inklappen">
+                        <x-lucide name="panel-left" class="size-5" />
+                    </button>
+                </div>
             </div>
 
-            <nav class="flex flex-col gap-1">
+            {{-- Search --}}
+            <div x-show="search && !collapsed" x-cloak class="px-3 pb-2">
+                <input type="text" x-model="q" x-ref="searchInput" placeholder="Zoeken…"
+                    class="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-subtle focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-ring/20">
+            </div>
+
+            {{-- Nav --}}
+            <nav class="flex flex-1 flex-col gap-0.5 px-3 pt-1">
                 @foreach ($nav as $item)
-                    <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover x-on:click="open = false"
+                    <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover
+                        x-show="matches(@js(strtolower($item['label'])))"
+                        :title="collapsed ? @js($item['label']) : null"
                         @class([
-                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
-                            'bg-zinc-200/80 text-zinc-950 dark:bg-zinc-800 dark:text-white' => request()->routeIs($item['route']),
-                            'text-zinc-600 hover:bg-zinc-200/60 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800' => ! request()->routeIs($item['route']),
+                            'flex h-11 items-center gap-3 rounded-md px-3 text-sm font-normal transition',
+                            'bg-elevated text-fg' => request()->routeIs($item['route']),
+                            'text-muted hover:bg-elevated/70' => ! request()->routeIs($item['route']),
+                        ])
+                        :class="collapsed && 'justify-center px-0'">
+                        <x-lucide name="{{ $item['icon'] }}" class="size-4 text-muted" />
+                        <span x-show="!collapsed">{{ $item['label'] }}</span>
+                    </a>
+                @endforeach
+                <p x-show="!collapsed && visible === 0" x-cloak class="px-3 py-2 text-sm text-subtle">Geen resultaten</p>
+            </nav>
+
+            {{-- Bottom --}}
+            <div class="mt-auto px-3 pb-4">
+                <p x-show="!collapsed" class="px-3 pb-1 text-xs text-subtle">Projecten</p>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit"
+                        class="flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-normal text-muted transition hover:bg-elevated/70"
+                        :class="collapsed && 'justify-center px-0'"
+                        :title="collapsed ? 'Uitloggen' : null">
+                        <x-lucide name="log-out" class="size-4 text-muted" />
+                        <span x-show="!collapsed">Uitloggen</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        {{-- Mobile sheet --}}
+        <div x-show="mobile" x-cloak @click="mobile = false" class="fixed inset-0 z-40 bg-black/30 lg:hidden"></div>
+        <aside x-show="mobile" x-cloak x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0"
+            x-transition:leave-end="-translate-x-full"
+            class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar lg:hidden">
+            <div class="flex h-14 items-center gap-2 px-4 text-fg">
+                <x-lucide name="compass" class="size-5" />
+                <span class="text-sm font-semibold">Pulse</span>
+                <button type="button" @click="mobile = false" class="ml-auto flex size-9 items-center justify-center rounded-md text-muted hover:bg-elevated">
+                    <x-lucide name="x" class="size-5" />
+                </button>
+            </div>
+            <nav class="flex flex-1 flex-col gap-0.5 px-3 pt-1">
+                @foreach ($nav as $item)
+                    <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover @click="mobile = false"
+                        @class([
+                            'flex h-11 items-center gap-3 rounded-md px-3 text-sm font-normal transition',
+                            'bg-elevated text-fg' => request()->routeIs($item['route']),
+                            'text-muted hover:bg-elevated/70' => ! request()->routeIs($item['route']),
                         ])>
-                        <flux:icon :icon="$item['icon']" class="size-5 shrink-0" />
+                        <x-lucide name="{{ $item['icon'] }}" class="size-4 text-muted" />
                         <span>{{ $item['label'] }}</span>
                     </a>
                 @endforeach
             </nav>
-
-            <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-4">
-                @csrf
-                <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-200/60 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                    <flux:icon icon="arrow-right-start-on-rectangle" class="size-5 shrink-0" />
-                    <span>Sign out</span>
-                </button>
-            </form>
+            <div class="mt-auto px-3 pb-4">
+                <p class="px-3 pb-1 text-xs text-subtle">Projecten</p>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-normal text-muted transition hover:bg-elevated/70">
+                        <x-lucide name="log-out" class="size-4 text-muted" />
+                        <span>Uitloggen</span>
+                    </button>
+                </form>
+            </div>
         </aside>
-
-        {{-- Mobile overlay --}}
-        <div x-show="open" x-cloak @click="open = false" class="fixed inset-0 z-30 bg-black/30 lg:hidden"></div>
 
         {{-- Main --}}
         <div class="flex min-w-0 flex-1 flex-col">
-            <div class="flex items-center gap-3 border-b border-zinc-200 p-4 lg:hidden dark:border-zinc-800">
-                <button type="button" @click="open = true"><flux:icon icon="bars-3" class="size-6" /></button>
-                <span class="text-sm font-semibold">{{ config('app.name') }}</span>
+            {{-- Mobile top bar --}}
+            <div class="flex items-center gap-3 px-4 py-3 lg:hidden">
+                <button type="button" @click="mobile = true" class="flex size-9 items-center justify-center rounded-md text-muted hover:bg-elevated">
+                    <x-lucide name="menu" class="size-6" />
+                </button>
+                <span class="flex items-center gap-2 text-sm font-semibold text-fg">
+                    <x-lucide name="compass" class="size-4" /> Pulse
+                </span>
             </div>
 
-            <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-6 lg:px-8">
+            <main class="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 py-4 pb-10 lg:gap-5 lg:px-8 lg:py-6">
                 {{ $slot }}
             </main>
         </div>
