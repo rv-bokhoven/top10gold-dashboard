@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Livewire\Concerns\HasDashboardFilters;
+use App\Models\OfferPartner;
 use App\Models\OfferStat;
 use App\Services\DashboardCache;
 use Illuminate\Support\Collection;
@@ -75,6 +76,12 @@ class OfferDetail extends Component
         });
 
         return $this->restoreStatRows($cached);
+    }
+
+    #[Computed]
+    public function partner(): ?OfferPartner
+    {
+        return OfferPartner::where('offer_id', $this->offerId)->first();
     }
 
     #[Computed]

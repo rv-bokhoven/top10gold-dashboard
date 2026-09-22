@@ -33,6 +33,55 @@
         @endforeach
     </div>
 
+    @php $partner = $this->partner; @endphp
+    <div class="rounded-lg bg-surface p-4 sm:p-5">
+        <div class="mb-3 flex items-center justify-between gap-3">
+            <h2 class="text-base font-medium text-fg">Partnergegevens</h2>
+            <a href="{{ route('offers.partners') }}" wire:navigate class="inline-flex h-8 items-center rounded-md border border-border bg-surface px-3 text-xs text-fg transition hover:bg-elevated">
+                {{ $partner ? 'Bewerken' : 'Invullen' }}
+            </a>
+        </div>
+        @if ($partner)
+            <div class="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                    <div class="text-xs text-muted">Partner</div>
+                    <div class="mt-0.5 text-sm text-fg">{{ $partner->partner ?: '—' }}</div>
+                </div>
+                <div>
+                    <div class="text-xs text-muted">Deal</div>
+                    <div class="mt-0.5 text-sm text-fg">{{ $partner->dealSummary() }}</div>
+                </div>
+                <div>
+                    <div class="text-xs text-muted">Contact</div>
+                    <div class="mt-0.5 text-sm text-fg">
+                        {{ $partner->contact_name ?: '—' }}
+                        @if ($partner->contact_email)
+                            <a href="mailto:{{ $partner->contact_email }}" class="block text-xs text-muted underline-offset-2 hover:text-fg hover:underline">{{ $partner->contact_email }}</a>
+                        @endif
+                    </div>
+                </div>
+                <div>
+                    <div class="text-xs text-muted">Platform</div>
+                    <div class="mt-0.5 text-sm">
+                        @if ($partner->platform_url)
+                            <a href="{{ $partner->platform_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-fg underline-offset-2 hover:underline"><x-lucide name="globe" class="size-3.5" /> Open</a>
+                        @else
+                            <span class="text-fg">—</span>
+                        @endif
+                    </div>
+                </div>
+                @if ($partner->comments)
+                    <div class="sm:col-span-2 lg:col-span-4">
+                        <div class="text-xs text-muted">Opmerkingen</div>
+                        <div class="mt-0.5 whitespace-pre-line text-sm text-fg">{{ $partner->comments }}</div>
+                    </div>
+                @endif
+            </div>
+        @else
+            <p class="text-sm text-subtle">Nog geen partnergegevens voor deze offer.</p>
+        @endif
+    </div>
+
     <div class="rounded-lg bg-surface p-4 transition-opacity sm:p-5" wire:loading.class.delay="opacity-40">
         <h2 class="mb-4 text-base font-medium text-fg">Per dag</h2>
         <div class="overflow-x-auto">

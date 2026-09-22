@@ -17,7 +17,10 @@
     @php
         $nav = [
             ['route' => 'dashboard', 'label' => 'Overzicht', 'icon' => 'layout-grid'],
-            ['route' => 'offers', 'label' => 'Offers', 'icon' => 'panels-top-left'],
+            ['route' => 'offers', 'label' => 'Offers', 'icon' => 'panels-top-left', 'children' => [
+                ['route' => 'offers', 'label' => 'Overzicht', 'exact' => true],
+                ['route' => 'offers.partners', 'label' => 'Partnerbeheer'],
+            ]],
             ['route' => 'google-ads', 'label' => 'Google Ads', 'icon' => 'megaphone'],
             ['route' => 'landing-pages', 'label' => "Landingspagina's", 'icon' => 'globe'],
             ['route' => 'logbook', 'label' => 'Logboek', 'icon' => 'book-open'],
@@ -70,18 +73,54 @@
             {{-- Nav --}}
             <nav class="flex flex-1 flex-col gap-0.5 px-3 pt-1">
                 @foreach ($nav as $item)
-                    <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover
-                        x-show="matches(@js(strtolower($item['label'])))"
-                        :title="collapsed ? @js($item['label']) : null"
-                        @class([
-                            'flex h-11 items-center gap-3 rounded-md px-3 text-sm font-normal transition',
-                            'bg-elevated text-fg' => request()->routeIs($item['route']),
-                            'text-muted hover:bg-elevated/70' => ! request()->routeIs($item['route']),
-                        ])
-                        :class="collapsed && 'justify-center px-0'">
-                        <x-lucide name="{{ $item['icon'] }}" class="size-4 text-muted" />
-                        <span x-show="!collapsed">{{ $item['label'] }}</span>
-                    </a>
+                    @if (empty($item['children']))
+                        <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover
+                            x-show="matches(@js(strtolower($item['label'])))"
+                            :title="collapsed ? @js($item['label']) : null"
+                            @class([
+                                'flex h-11 items-center gap-3 rounded-md px-3 text-sm font-normal transition',
+                                'bg-elevated text-fg' => request()->routeIs($item['route']),
+                                'text-muted hover:bg-elevated/70' => ! request()->routeIs($item['route']),
+                            ])
+                            :class="collapsed && 'justify-center px-0'">
+                            <x-lucide name="{{ $item['icon'] }}" class="size-4 text-muted" />
+                            <span x-show="!collapsed">{{ $item['label'] }}</span>
+                        </a>
+                    @else
+                        @php $groupActive = request()->routeIs($item['route'].'*'); @endphp
+                        <div x-data="{ open: @js($groupActive) }" x-show="matches(@js(strtolower($item['label'])))">
+                            <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover
+                                @click="if (! collapsed) { open = ! open; $event.preventDefault(); }"
+                                :title="collapsed ? @js($item['label']) : null"
+                                @class([
+                                    'flex h-11 items-center gap-3 rounded-md px-3 text-sm font-normal transition',
+                                    'text-fg' => $groupActive,
+                                    'text-muted hover:bg-elevated/70' => ! $groupActive,
+                                ])
+                                :class="collapsed && 'justify-center px-0'">
+                                <x-lucide name="{{ $item['icon'] }}" class="size-4 text-muted" />
+                                <span x-show="!collapsed">{{ $item['label'] }}</span>
+                                <x-lucide name="chevron-down" class="ml-auto size-4 text-subtle transition-transform" x-show="!collapsed" :class="open && 'rotate-180'" />
+                            </a>
+                            <div x-show="open && !collapsed" x-cloak class="mt-0.5 flex flex-col gap-0.5">
+                                @foreach ($item['children'] as $child)
+                                    @php
+                                        $childActive = ($child['exact'] ?? false)
+                                            ? (request()->routeIs($child['route']) || request()->routeIs('offers.show'))
+                                            : request()->routeIs($child['route']);
+                                    @endphp
+                                    <a href="{{ route($child['route'], request()->query()) }}" wire:navigate.hover
+                                        @class([
+                                            'flex h-9 items-center rounded-md pl-11 pr-3 text-sm font-normal transition',
+                                            'bg-elevated text-fg' => $childActive,
+                                            'text-muted hover:bg-elevated/70' => ! $childActive,
+                                        ])>
+                                        {{ $child['label'] }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 @endforeach
                 <p x-show="!collapsed && visible === 0" x-cloak class="px-3 py-2 text-sm text-subtle">Geen resultaten</p>
             </nav>
@@ -121,12 +160,32 @@
                     <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover @click="mobile = false"
                         @class([
                             'flex h-11 items-center gap-3 rounded-md px-3 text-sm font-normal transition',
-                            'bg-elevated text-fg' => request()->routeIs($item['route']),
-                            'text-muted hover:bg-elevated/70' => ! request()->routeIs($item['route']),
+                            'bg-elevated text-fg' => empty($item['children']) && request()->routeIs($item['route']),
+                            'text-fg' => ! empty($item['children']) && request()->routeIs($item['route'].'*'),
+                            'text-muted hover:bg-elevated/70' => empty($item['children']) ? ! request()->routeIs($item['route']) : ! request()->routeIs($item['route'].'*'),
                         ])>
                         <x-lucide name="{{ $item['icon'] }}" class="size-4 text-muted" />
                         <span>{{ $item['label'] }}</span>
                     </a>
+                    @if (! empty($item['children']))
+                        <div class="flex flex-col gap-0.5">
+                            @foreach ($item['children'] as $child)
+                                @php
+                                    $childActive = ($child['exact'] ?? false)
+                                        ? (request()->routeIs($child['route']) || request()->routeIs('offers.show'))
+                                        : request()->routeIs($child['route']);
+                                @endphp
+                                <a href="{{ route($child['route'], request()->query()) }}" wire:navigate.hover @click="mobile = false"
+                                    @class([
+                                        'flex h-9 items-center rounded-md pl-11 pr-3 text-sm font-normal transition',
+                                        'bg-elevated text-fg' => $childActive,
+                                        'text-muted hover:bg-elevated/70' => ! $childActive,
+                                    ])>
+                                    {{ $child['label'] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
                 @endforeach
             </nav>
             <div class="mt-auto px-3 pb-4">

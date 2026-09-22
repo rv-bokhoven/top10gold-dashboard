@@ -64,6 +64,7 @@ Route::post('/logout', function () {
 Route::middleware('dashboard.auth')->group(function () {
     Route::get('/', Pages\Overview::class)->name('dashboard');
     Route::get('/offers', Pages\Offers::class)->name('offers');
+    Route::get('/offers/partners', Pages\OfferPartners::class)->name('offers.partners');
     Route::get('/offers/{offerId}', Pages\OfferDetail::class)->name('offers.show');
     Route::get('/google-ads', Pages\GoogleAds::class)->name('google-ads');
     Route::get('/landing-pages', Pages\LandingPages::class)->name('landing-pages');
