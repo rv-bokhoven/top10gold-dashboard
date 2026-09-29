@@ -33,35 +33,47 @@
             collapsed: $persist(false).as('pulse.collapsed'),
             search: false,
             mobile: false,
+            syncing: false,
             q: '',
             labels: {{ $navLabels }},
             matches(label) { return this.q === '' || label.toLowerCase().includes(this.q.toLowerCase()); },
             get visible() { return this.labels.filter(l => this.matches(l)).length; },
+            refresh() { if (this.syncing) return; this.syncing = true; window.Livewire.dispatch('dashboard-refresh'); },
         }"
+        @stats-refreshed.window="syncing = false"
         class="flex min-h-screen"
     >
         {{-- Desktop sidebar --}}
         <aside
             :class="collapsed ? 'w-16' : 'w-64'"
-            class="hidden shrink-0 flex-col bg-sidebar transition-[width] duration-200 lg:flex"
+            class="sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden bg-sidebar transition-[width] duration-200 lg:flex"
         >
-            {{-- Top: compass + controls --}}
-            <div class="flex h-14 items-center gap-1 px-3" :class="collapsed && 'flex-col justify-center gap-2 py-2'">
-                <div class="flex size-11 items-center justify-center text-fg">
-                    <x-lucide name="compass" class="size-5" />
-                </div>
-                <div class="ml-auto flex items-center" :class="collapsed && 'ml-0'">
-                    <button type="button" x-show="!collapsed" @click="search = !search; q = ''"
+            {{-- Top: logo + controls --}}
+            <div class="flex h-14 shrink-0 items-center gap-1 px-3">
+                <a href="{{ route('dashboard') }}" wire:navigate class="flex size-10 shrink-0 items-center justify-center" :class="collapsed && 'mx-auto'" title="top10gold">
+                    <img src="{{ asset('images/logo.png') }}" alt="top10gold" class="size-8">
+                </a>
+                <div class="ml-auto flex items-center" x-show="!collapsed">
+                    <button type="button" @click="search = !search; q = ''"
                         class="flex size-11 items-center justify-center rounded-md text-muted transition hover:bg-elevated"
                         title="Zoeken">
                         <x-lucide name="search" class="size-5" />
                     </button>
-                    <button type="button" @click="collapsed = !collapsed"
+                    <button type="button" @click="collapsed = true"
                         class="flex size-11 items-center justify-center rounded-md text-muted transition hover:bg-elevated"
                         title="Inklappen">
                         <x-lucide name="panel-left" class="size-5" />
                     </button>
                 </div>
+            </div>
+
+            {{-- Expand control when collapsed --}}
+            <div x-show="collapsed" class="flex shrink-0 justify-center pb-1">
+                <button type="button" @click="collapsed = false"
+                    class="flex size-11 items-center justify-center rounded-md text-muted transition hover:bg-elevated"
+                    title="Uitklappen">
+                    <x-lucide name="panel-left" class="size-5" />
+                </button>
             </div>
 
             {{-- Search --}}
@@ -71,7 +83,7 @@
             </div>
 
             {{-- Nav --}}
-            <nav class="flex flex-1 flex-col gap-0.5 px-3 pt-1">
+            <nav class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pt-1">
                 @foreach ($nav as $item)
                     @if (empty($item['children']))
                         <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover
@@ -89,11 +101,11 @@
                     @else
                         @php $groupActive = request()->routeIs($item['route'].'*'); @endphp
                         <div x-data="{ open: @js($groupActive) }" x-show="matches(@js(strtolower($item['label'])))">
-                            <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover
-                                @click="if (! collapsed) { open = ! open; $event.preventDefault(); }"
+                            <button type="button"
+                                @click="collapsed ? Livewire.navigate(@js(route($item['route'], request()->query()))) : (open = ! open)"
                                 :title="collapsed ? @js($item['label']) : null"
                                 @class([
-                                    'flex h-11 items-center gap-3 rounded-md px-3 text-sm font-normal transition',
+                                    'flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-normal transition',
                                     'text-fg' => $groupActive,
                                     'text-muted hover:bg-elevated/70' => ! $groupActive,
                                 ])
@@ -101,7 +113,7 @@
                                 <x-lucide name="{{ $item['icon'] }}" class="size-4 text-muted" />
                                 <span x-show="!collapsed">{{ $item['label'] }}</span>
                                 <x-lucide name="chevron-down" class="ml-auto size-4 text-subtle transition-transform" x-show="!collapsed" :class="open && 'rotate-180'" />
-                            </a>
+                            </button>
                             <div x-show="open && !collapsed" x-cloak class="mt-0.5 flex flex-col gap-0.5">
                                 @foreach ($item['children'] as $child)
                                     @php
@@ -126,8 +138,14 @@
             </nav>
 
             {{-- Bottom --}}
-            <div class="mt-auto px-3 pb-4">
-                <p x-show="!collapsed" class="px-3 pb-1 text-xs text-subtle">Projecten</p>
+            <div class="mt-auto shrink-0 px-3 pb-4 pt-2">
+                <button type="button" @click="refresh()" :disabled="syncing"
+                    class="flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-normal text-muted transition hover:bg-elevated/70 disabled:opacity-60"
+                    :class="collapsed && 'justify-center px-0'"
+                    :title="collapsed ? 'Verversen' : null">
+                    <x-lucide name="refresh" class="size-4 text-muted" :class="syncing && 'animate-spin'" />
+                    <span x-show="!collapsed" x-text="syncing ? 'Bezig…' : 'Verversen'"></span>
+                </button>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit"
@@ -148,14 +166,13 @@
             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0"
             x-transition:leave-end="-translate-x-full"
             class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar lg:hidden">
-            <div class="flex h-14 items-center gap-2 px-4 text-fg">
-                <x-lucide name="compass" class="size-5" />
-                <span class="text-sm font-semibold">Pulse</span>
+            <div class="flex h-14 shrink-0 items-center gap-2 px-4 text-fg">
+                <img src="{{ asset('images/logo.png') }}" alt="top10gold" class="size-8">
                 <button type="button" @click="mobile = false" class="ml-auto flex size-9 items-center justify-center rounded-md text-muted hover:bg-elevated">
                     <x-lucide name="x" class="size-5" />
                 </button>
             </div>
-            <nav class="flex flex-1 flex-col gap-0.5 px-3 pt-1">
+            <nav class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pt-1">
                 @foreach ($nav as $item)
                     <a href="{{ route($item['route'], request()->query()) }}" wire:navigate.hover @click="mobile = false"
                         @class([
@@ -188,8 +205,12 @@
                     @endif
                 @endforeach
             </nav>
-            <div class="mt-auto px-3 pb-4">
-                <p class="px-3 pb-1 text-xs text-subtle">Projecten</p>
+            <div class="mt-auto shrink-0 px-3 pb-4 pt-2">
+                <button type="button" @click="refresh()" :disabled="syncing"
+                    class="flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-normal text-muted transition hover:bg-elevated/70 disabled:opacity-60">
+                    <x-lucide name="refresh" class="size-4 text-muted" :class="syncing && 'animate-spin'" />
+                    <span x-text="syncing ? 'Bezig…' : 'Verversen'"></span>
+                </button>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-normal text-muted transition hover:bg-elevated/70">
@@ -207,9 +228,7 @@
                 <button type="button" @click="mobile = true" class="flex size-9 items-center justify-center rounded-md text-muted hover:bg-elevated">
                     <x-lucide name="menu" class="size-6" />
                 </button>
-                <span class="flex items-center gap-2 text-sm font-semibold text-fg">
-                    <x-lucide name="compass" class="size-4" /> Pulse
-                </span>
+                <img src="{{ asset('images/logo.png') }}" alt="top10gold" class="size-7">
             </div>
 
             <main class="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 py-4 pb-10 lg:gap-5 lg:px-8 lg:py-6">

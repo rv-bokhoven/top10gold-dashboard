@@ -26,7 +26,7 @@
 
     <div class="flex flex-wrap items-center gap-2">
         {{-- Source toggle --}}
-        <div class="inline-flex h-9 shrink-0 overflow-hidden rounded-md border border-border">
+        <div class="hidden h-9 shrink-0 overflow-hidden rounded-md border border-border sm:inline-flex">
             @foreach (['all' => 'Alle'] + collect($sources)->map(fn ($c) => $c['label'])->all() as $val => $label)
                 <button type="button" wire:click="$set('source', '{{ $val }}')"
                     @class([
@@ -38,7 +38,7 @@
         </div>
 
         {{-- Currency toggle --}}
-        <div class="inline-flex h-9 shrink-0 overflow-hidden rounded-md border border-border">
+        <div class="hidden h-9 shrink-0 overflow-hidden rounded-md border border-border sm:inline-flex">
             @foreach (['EUR' => '€', 'USD' => '$'] as $val => $label)
                 <button type="button" wire:click="$set('currency', '{{ $val }}')"
                     @class([
@@ -150,14 +150,5 @@
             </div>
         </div>
 
-        {{-- Refresh --}}
-        @if ($this->syncedAt)
-            <span class="hidden text-xs text-subtle xl:inline">{{ $lastSyncMessage ?? 'Bijgewerkt '.$this->syncedAt->locale('nl')->diffForHumans() }}</span>
-        @endif
-        <button type="button" wire:click="refreshData" wire:loading.attr="disabled" wire:target="refreshData"
-            class="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm text-fg transition hover:bg-elevated">
-            <x-lucide name="refresh" class="size-4 text-muted" wire:loading.class="animate-spin" wire:target="refreshData" />
-            <span class="hidden sm:inline">Verversen</span>
-        </button>
     </div>
 </div>

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 
 /**
@@ -158,6 +159,7 @@ trait HasDashboardFilters
         return number_format($value, 0, ',', '.');
     }
 
+    #[On('dashboard-refresh')]
     public function refreshData(): void
     {
         Artisan::call('redtrack:sync');

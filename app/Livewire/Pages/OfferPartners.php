@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Livewire\Concerns\HasDashboardFilters;
 use App\Models\OfferPartner;
 use App\Models\OfferStat;
 use Illuminate\Support\Collection;
@@ -12,6 +13,8 @@ use Livewire\Component;
 #[Layout('components.layouts.dashboard')]
 class OfferPartners extends Component
 {
+    use HasDashboardFilters;
+
     public ?string $editingOfferId = null;
 
     public string $editingOfferTitle = '';
@@ -78,7 +81,8 @@ class OfferPartners extends Component
 
         $partner = OfferPartner::where('offer_id', $offerId)->first();
 
-        $this->partner = $partner->partner ?? '';
+        // Nog geen partner ingevuld? Begin met de offernaam als suggestie.
+        $this->partner = $partner->partner ?? $this->editingOfferTitle;
         $this->platform_url = $partner->platform_url ?? '';
         $this->contact_name = $partner->contact_name ?? '';
         $this->contact_email = $partner->contact_email ?? '';
