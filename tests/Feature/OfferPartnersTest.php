@@ -26,6 +26,24 @@ class OfferPartnersTest extends TestCase
         ]);
     }
 
+    private function payload(array $overrides = []): array
+    {
+        return array_merge([
+            'offer_id' => 'priority-gold',
+            'offer_title' => 'Priority Gold',
+            'partner' => '',
+            'platform_url' => '',
+            'contact_name' => '',
+            'contact_email' => '',
+            'deal_model' => '',
+            'payout' => '',
+            'payout_currency' => 'USD',
+            'has_revshare' => false,
+            'revshare_pct' => '',
+            'comments' => '',
+        ], $overrides);
+    }
+
     public function test_it_lists_offers_from_stats(): void
     {
         $this->seedOffer();
@@ -40,17 +58,15 @@ class OfferPartnersTest extends TestCase
         $this->seedOffer();
 
         Livewire::test(OfferPartners::class)
-            ->call('edit', 'priority-gold')
-            ->set('partner', 'Priority Gold LLC')
-            ->set('contact_email', 'deals@prioritygold.com')
-            ->set('deal_model', 'cpql')
-            ->set('payout', '25')
-            ->set('payout_currency', 'USD')
-            ->set('has_revshare', true)
-            ->set('revshare_pct', '20')
-            ->call('save')
-            ->assertHasNoErrors()
-            ->assertSet('editingOfferId', null);
+            ->call('savePartner', $this->payload([
+                'partner' => 'Priority Gold LLC',
+                'contact_email' => 'deals@prioritygold.com',
+                'deal_model' => 'cpql',
+                'payout' => '25',
+                'has_revshare' => true,
+                'revshare_pct' => '20',
+            ]))
+            ->assertReturned(['ok' => true]);
 
         $partner = OfferPartner::where('offer_id', 'priority-gold')->first();
         $this->assertNotNull($partner);
@@ -60,14 +76,14 @@ class OfferPartnersTest extends TestCase
         $this->assertSame('CPQL $ 25,00 + 20% revshare', $partner->dealSummary());
     }
 
-    public function test_it_validates_the_contact_email(): void
+    public function test_it_returns_validation_errors_for_a_bad_email(): void
     {
         $this->seedOffer();
 
         Livewire::test(OfferPartners::class)
-            ->call('edit', 'priority-gold')
-            ->set('contact_email', 'not-an-email')
-            ->call('save')
-            ->assertHasErrors(['contact_email' => 'email']);
+            ->call('savePartner', $this->payload(['contact_email' => 'not-an-email']))
+            ->assertReturned(fn ($result) => $result['ok'] === false && isset($result['errors']['contact_email']));
+
+        $this->assertNull(OfferPartner::where('offer_id', 'priority-gold')->first());
     }
 }

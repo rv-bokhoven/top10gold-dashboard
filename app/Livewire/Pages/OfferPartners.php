@@ -6,6 +6,7 @@ use App\Livewire\Concerns\HasDashboardFilters;
 use App\Models\OfferPartner;
 use App\Models\OfferStat;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -14,31 +15,6 @@ use Livewire\Component;
 class OfferPartners extends Component
 {
     use HasDashboardFilters;
-
-    public ?string $editingOfferId = null;
-
-    public string $editingOfferTitle = '';
-
-    // Formuliervelden
-    public string $partner = '';
-
-    public string $platform_url = '';
-
-    public string $contact_name = '';
-
-    public string $contact_email = '';
-
-    public string $deal_model = '';
-
-    public string $payout = '';
-
-    public string $payout_currency = 'USD';
-
-    public bool $has_revshare = false;
-
-    public string $revshare_pct = '';
-
-    public string $comments = '';
 
     /** Alle offers uit de stats, verrijkt met partnergegevens. */
     #[Computed]
@@ -73,30 +49,23 @@ class OfferPartners extends Component
             ->values();
     }
 
-    public function edit(string $offerId): void
+    /**
+     * Slaat de partnergegevens van één offer op. Wordt vanuit Alpine
+     * aangeroepen ($wire.savePartner) zodat openen/sluiten/typen geen
+     * server-round-trips zijn — alleen het opslaan is er één.
+     */
+    public function savePartner(array $data): array
     {
-        $offer = $this->offers->firstWhere('offer_id', $offerId);
-        $this->editingOfferId = $offerId;
-        $this->editingOfferTitle = $offer->offer_title ?? $offerId;
+        // Lege strings uit JS naar null zodat 'nullable' netjes werkt.
+        foreach (['payout', 'revshare_pct'] as $numeric) {
+            if (($data[$numeric] ?? '') === '') {
+                $data[$numeric] = null;
+            }
+        }
 
-        $partner = OfferPartner::where('offer_id', $offerId)->first();
-
-        // Nog geen partner ingevuld? Begin met de offernaam als suggestie.
-        $this->partner = $partner->partner ?? $this->editingOfferTitle;
-        $this->platform_url = $partner->platform_url ?? '';
-        $this->contact_name = $partner->contact_name ?? '';
-        $this->contact_email = $partner->contact_email ?? '';
-        $this->deal_model = $partner->deal_model ?? '';
-        $this->payout = $partner && $partner->payout !== null ? (string) (float) $partner->payout : '';
-        $this->payout_currency = $partner->payout_currency ?? 'USD';
-        $this->has_revshare = (bool) ($partner->has_revshare ?? false);
-        $this->revshare_pct = $partner && $partner->revshare_pct !== null ? (string) (float) $partner->revshare_pct : '';
-        $this->comments = $partner->comments ?? '';
-    }
-
-    public function save(): void
-    {
-        $data = $this->validate([
+        $validator = Validator::make($data, [
+            'offer_id' => 'required|string|max:255',
+            'offer_title' => 'nullable|string|max:255',
             'partner' => 'nullable|string|max:255',
             'platform_url' => 'nullable|url|max:2000',
             'contact_name' => 'nullable|string|max:255',
@@ -109,36 +78,33 @@ class OfferPartners extends Component
             'comments' => 'nullable|string|max:2000',
         ]);
 
+        if ($validator->fails()) {
+            return ['ok' => false, 'errors' => $validator->errors()->toArray()];
+        }
+
+        $v = $validator->validated();
+        $hasRevshare = (bool) ($v['has_revshare'] ?? false);
+
         OfferPartner::updateOrCreate(
-            ['offer_id' => $this->editingOfferId],
+            ['offer_id' => $v['offer_id']],
             [
-                'offer_title' => $this->editingOfferTitle,
-                'partner' => $data['partner'] ?: null,
-                'platform_url' => $data['platform_url'] ?: null,
-                'contact_name' => $data['contact_name'] ?: null,
-                'contact_email' => $data['contact_email'] ?: null,
-                'deal_model' => $data['deal_model'] ?: null,
-                'payout' => $data['payout'] !== '' ? $data['payout'] : null,
-                'payout_currency' => $data['payout_currency'],
-                'has_revshare' => $data['has_revshare'],
-                'revshare_pct' => $data['has_revshare'] && $data['revshare_pct'] !== '' ? $data['revshare_pct'] : null,
-                'comments' => $data['comments'] ?: null,
+                'offer_title' => $v['offer_title'] ?: null,
+                'partner' => $v['partner'] ?: null,
+                'platform_url' => $v['platform_url'] ?: null,
+                'contact_name' => $v['contact_name'] ?: null,
+                'contact_email' => $v['contact_email'] ?: null,
+                'deal_model' => $v['deal_model'] ?: null,
+                'payout' => $v['payout'] ?? null,
+                'payout_currency' => $v['payout_currency'],
+                'has_revshare' => $hasRevshare,
+                'revshare_pct' => $hasRevshare ? ($v['revshare_pct'] ?? null) : null,
+                'comments' => $v['comments'] ?: null,
             ]
         );
 
-        $this->cancel();
         unset($this->offers);
-    }
 
-    public function cancel(): void
-    {
-        $this->reset([
-            'editingOfferId', 'editingOfferTitle', 'partner', 'platform_url',
-            'contact_name', 'contact_email', 'deal_model', 'payout',
-            'has_revshare', 'revshare_pct', 'comments',
-        ]);
-        $this->payout_currency = 'USD';
-        $this->resetValidation();
+        return ['ok' => true];
     }
 
     public function render()
