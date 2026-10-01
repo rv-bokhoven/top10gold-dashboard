@@ -46,11 +46,21 @@ Route::get('/cron/notify', function (Request $request) {
 
     abort_unless($secret !== '' && hash_equals($secret, $provided), 403);
 
+    $output = '';
+
+    // Landingspagina's elk uur verversen zodat offline/404 tijdig wordt
+    // gemeld (vereist de Google Ads-koppeling voor de live final URLs).
+    if (filled(config('google_ads.developer_token'))) {
+        Artisan::call('landing-pages:check');
+        $output .= trim(Artisan::output())."\n";
+    }
+
     Artisan::call('notifications:run');
+    $output .= trim(Artisan::output());
 
     return response()->json([
         'ok' => true,
-        'output' => trim(Artisan::output()),
+        'output' => trim($output),
     ]);
 })->name('cron.notify');
 

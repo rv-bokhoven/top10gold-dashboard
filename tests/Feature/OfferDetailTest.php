@@ -16,6 +16,13 @@ class OfferDetailTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+
+        parent::tearDown();
+    }
+
     public function test_offers_default_to_the_current_month(): void
     {
         Livewire::test(Offers::class)
@@ -24,6 +31,10 @@ class OfferDetailTest extends TestCase
 
     public function test_offer_detail_aggregates_daily_stats_and_corrections(): void
     {
+        // Tijd bevriezen op een vaste dag midden in de maand, zodat "gisteren"
+        // altijd in dezelfde maand valt (anders faalt de test op de 1e).
+        CarbonImmutable::setTestNow('2026-06-15 12:00:00');
+
         // SQLite bewaart een Eloquent date-cast als middernacht; kies gisteren
         // zodat de test niet afhankelijk is van een eindgrens op dezelfde dag.
         $date = CarbonImmutable::yesterday()->toDateString();

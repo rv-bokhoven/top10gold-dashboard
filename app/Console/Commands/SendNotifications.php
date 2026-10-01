@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\GoogleAdStat;
+use App\Models\LandingPage;
 use App\Models\Setting;
 use App\Services\CampaignMonitor;
 use App\Services\RedTrackClient;
@@ -30,8 +31,50 @@ class SendNotifications extends Command
 
         $this->notifyConversions($telegram, $redtrack);
         $this->notifyAlerts($telegram, $monitor);
+        $this->notifyLandingPages($telegram);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Melden zodra een landingspagina van online → offline/404 gaat. Een
+     * state (url_hash → status) voorkomt herhaalde meldingen; herstel wordt
+     * stil uit de state verwijderd (geen herstelmelding, op verzoek).
+     */
+    protected function notifyLandingPages(TelegramNotifier $telegram): void
+    {
+        $pages = LandingPage::all()->keyBy('url_hash');
+        $state = json_decode((string) Setting::get('telegram.landing_state', '{}'), true) ?: [];
+
+        // Nieuw kapot → waarschuwen.
+        foreach ($pages as $hash => $page) {
+            if (! $page->ok && ! isset($state[$hash])) {
+                $status = $page->status_code
+                    ? 'HTTP '.$page->status_code
+                    : 'offline (geen reactie)';
+
+                $message = '<b>Landingspagina offline</b>'
+                    ."\n".e($page->url)." — {$status}";
+
+                if ($page->campaigns) {
+                    $message .= "\nCampagnes: ".e($page->campaigns);
+                }
+
+                if ($telegram->send($message)) {
+                    $state[$hash] = $page->status_code ?: 'down';
+                }
+            }
+        }
+
+        // Weer online of verdwenen uit de live ads → stil uit de state halen.
+        foreach (array_keys($state) as $hash) {
+            $page = $pages->get($hash);
+            if (! $page || $page->ok) {
+                unset($state[$hash]);
+            }
+        }
+
+        Setting::put('telegram.landing_state', json_encode($state));
     }
 
     protected function notifyConversions(TelegramNotifier $telegram, RedTrackClient $redtrack): void
