@@ -7,6 +7,7 @@ use App\Models\LogEntry;
 use App\Models\OfferStat;
 use App\Services\CampaignMonitor;
 use App\Services\DashboardCache;
+use App\Services\RedTrackClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -308,6 +309,70 @@ class Overview extends Component
             'revenue' => $revenue,
             'roi' => $cost > 0 ? ($revenue - $cost) / $cost : null,
         ];
+    }
+
+    /**
+     * Individuele leads/sales van de gekozen periode, live uit RedTrack
+     * (/conversions), nieuwste eerst en gecapt op 100. Payout blijft "native"
+     * zodat de valuta-toggle hem in de view omrekent.
+     */
+    #[Computed]
+    public function recentLeads(): array
+    {
+        [$from, $to] = $this->range();
+        $key = implode(':', ['recent-leads', $this->source, $from->toDateString(), $to->toDateString()]);
+
+        return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+            try {
+                $items = app(RedTrackClient::class)->conversions($from->toDateString(), $to->toDateString());
+            } catch (\Throwable $e) {
+                return ['items' => [], 'total' => 0, 'error' => true];
+            }
+
+            $sourceMap = collect(config('redtrack.sources'))
+                ->mapWithKeys(fn ($cfg, $k) => [$cfg['match'] => $k]);
+
+            $wanted = ['lead' => 'Lead', 'qlead' => 'Q-Lead', 'sale' => 'Sale'];
+            $leads = [];
+
+            foreach ($items as $c) {
+                $type = $c['type'] ?? null;
+                if (! isset($wanted[$type])) {
+                    continue;
+                }
+
+                $sourceKey = $sourceMap[$c['source'] ?? ''] ?? null;
+                if ($this->source !== 'all' && $sourceKey !== $this->source) {
+                    continue;
+                }
+
+                $leads[] = [
+                    'time' => $c['created_at'] ?? null,
+                    'type' => $type,
+                    'type_label' => $wanted[$type],
+                    'offer' => ($c['offer'] ?? '') ?: null,
+                    'campaign' => ($c['rt_campaign'] ?? '') ?: (($c['campaign'] ?? '') ?: null),
+                    'source_label' => $sourceKey
+                        ? config("redtrack.sources.{$sourceKey}.label")
+                        : (($c['source'] ?? '') ?: '—'),
+                    'country' => ($c['country'] ?? '') ?: null,
+                    'city' => ($c['city'] ?? '') ?: null,
+                    'keyword' => ($c['rt_keyword'] ?? '') ?: null,
+                    'ad' => ($c['rt_ad'] ?? '') ?: null,
+                    'device' => ($d = trim(preg_replace('/^Device/', '', (string) ($c['device'] ?? '')))) !== '' ? $d : null,
+                    'os' => ($c['os'] ?? '') ?: null,
+                    'payout' => (float) ($c['payout'] ?? 0),
+                    'currency' => ($c['currency'] ?? '') ?: 'USD',
+                ];
+            }
+
+            usort($leads, fn ($a, $b) => strcmp((string) $b['time'], (string) $a['time']));
+
+            return [
+                'items' => array_slice($leads, 0, 100),
+                'total' => count($leads),
+            ];
+        });
     }
 
     public function render()

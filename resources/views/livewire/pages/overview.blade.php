@@ -236,6 +236,78 @@
         </div>
     </div>
 
+    {{-- Recente leads --}}
+    @php $leads = $this->recentLeads; @endphp
+    <div class="rounded-lg bg-surface p-4 sm:p-5 transition-opacity" wire:loading.class.delay="opacity-40">
+        <div class="mb-4 flex items-end justify-between gap-3">
+            <div>
+                <h2 class="text-base font-medium text-fg">Recente leads</h2>
+                <p class="text-xs text-subtle">Binnengekomen leads & sales in de gekozen periode · nieuwste eerst</p>
+            </div>
+            @if (($leads['total'] ?? 0) > 0)
+                <span class="shrink-0 text-xs text-subtle">
+                    {{ $this->nlInt($leads['total']) }} totaal @if ($leads['total'] > count($leads['items']))· laatste {{ count($leads['items']) }}@endif
+                </span>
+            @endif
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[880px] text-sm">
+                <thead>
+                    <tr class="border-b border-border text-left text-xs text-subtle">
+                        <th class="py-2 pr-3 font-normal">Tijd</th>
+                        <th class="py-2 pr-3 font-normal">Type</th>
+                        <th class="py-2 pr-3 font-normal">Offer</th>
+                        <th class="py-2 pr-3 font-normal">Campagne</th>
+                        <th class="py-2 pr-3 font-normal">Source</th>
+                        <th class="py-2 pr-3 font-normal">Land</th>
+                        <th class="py-2 pr-3 font-normal">Zoekwoord / ad</th>
+                        <th class="py-2 pr-3 font-normal">Device</th>
+                        <th class="py-2 pr-3 text-right font-normal">Payout</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($leads['items'] as $l)
+                        @php
+                            $tone = ['Sale' => 'text-positive', 'Q-Lead' => 'text-fg', 'Lead' => 'text-muted'][$l['type_label']] ?? 'text-muted';
+                        @endphp
+                        <tr class="border-b border-border/60 align-top last:border-0">
+                            <td class="whitespace-nowrap py-3 pr-3 tabular-nums text-muted">
+                                {{ $l['time'] ? \Carbon\CarbonImmutable::parse($l['time'])->locale('nl')->isoFormat('D MMM HH:mm') : '—' }}
+                            </td>
+                            <td class="py-3 pr-3">
+                                <span class="inline-flex rounded-full bg-elevated px-2 py-0.5 text-xs font-medium {{ $tone }}">{{ $l['type_label'] }}</span>
+                            </td>
+                            <td class="py-3 pr-3 text-fg">{{ $l['offer'] ?? '—' }}</td>
+                            <td class="py-3 pr-3 text-muted">{{ $l['campaign'] ?? '—' }}</td>
+                            <td class="py-3 pr-3 text-muted">{{ $l['source_label'] }}</td>
+                            <td class="py-3 pr-3 text-muted">
+                                {{ $l['country'] ?? '—' }}@if ($l['city'])<div class="text-xs text-subtle">{{ $l['city'] }}</div>@endif
+                            </td>
+                            <td class="py-3 pr-3 text-muted">
+                                {{ $l['keyword'] ?? '—' }}@if ($l['ad'])<div class="text-xs text-subtle">{{ \Illuminate\Support\Str::limit($l['ad'], 40) }}</div>@endif
+                            </td>
+                            <td class="whitespace-nowrap py-3 pr-3 text-muted">
+                                {{ $l['device'] ?? '—' }}@if ($l['os'])<span class="text-subtle"> · {{ $l['os'] }}</span>@endif
+                            </td>
+                            <td class="py-3 text-right tabular-nums text-fg">
+                                {{ $l['payout'] > 0 ? $this->money($l['payout'], $l['currency']) : '—' }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="py-10 text-center text-subtle">
+                            @if ($leads['error'] ?? false)
+                                Kon de leads nu niet ophalen bij RedTrack. Probeer het later opnieuw.
+                            @else
+                                Geen leads in deze periode.
+                            @endif
+                        </td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     {{-- Maandoverzicht --}}
     <div class="rounded-lg bg-surface p-4 sm:p-5 transition-opacity" wire:loading.class.delay="opacity-40">
         <h2 class="text-base font-medium text-fg">Maandoverzicht</h2>

@@ -4,11 +4,21 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\EnsureDashboardAuth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // De Overview haalt recente leads live uit RedTrack; in tests afvangen
+        // zodat er geen echte API-call uitgaat.
+        Http::fake(['*' => Http::response(['items' => []])]);
+    }
 
     public function test_dashboard_redirects_to_login_when_not_authenticated(): void
     {
