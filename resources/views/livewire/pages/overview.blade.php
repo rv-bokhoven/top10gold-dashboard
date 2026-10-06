@@ -252,13 +252,12 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[880px] text-sm">
+            <table class="w-full min-w-[820px] text-sm">
                 <thead>
                     <tr class="border-b border-border text-left text-xs text-subtle">
                         <th class="py-2 pr-3 font-normal">Tijd</th>
                         <th class="py-2 pr-3 font-normal">Type</th>
                         <th class="py-2 pr-3 font-normal">Offer</th>
-                        <th class="py-2 pr-3 font-normal">Campagne</th>
                         <th class="py-2 pr-3 font-normal">Source</th>
                         <th class="py-2 pr-3 font-normal">Land</th>
                         <th class="py-2 pr-3 font-normal">Zoekwoord / ad</th>
@@ -279,7 +278,6 @@
                                 <span class="inline-flex rounded-full bg-elevated px-2 py-0.5 text-xs font-medium {{ $tone }}">{{ $l['type_label'] }}</span>
                             </td>
                             <td class="py-3 pr-3 text-fg">{{ $l['offer'] ?? '—' }}</td>
-                            <td class="py-3 pr-3 text-muted">{{ $l['campaign'] ?? '—' }}</td>
                             <td class="py-3 pr-3 text-muted">{{ $l['source_label'] }}</td>
                             <td class="py-3 pr-3 text-muted">
                                 {{ $l['country'] ?? '—' }}@if ($l['city'])<div class="text-xs text-subtle">{{ $l['city'] }}</div>@endif
@@ -295,7 +293,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="py-10 text-center text-subtle">
+                        <tr><td colspan="8" class="py-10 text-center text-subtle">
                             @if ($leads['error'] ?? false)
                                 Kon de leads nu niet ophalen bij RedTrack. Probeer het later opnieuw.
                             @else
