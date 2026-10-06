@@ -114,6 +114,53 @@ class GoogleAdsClient
     }
 
     /**
+     * Recente wijzigingen in het account (change history). Google Ads bewaart
+     * dit maximaal 30 dagen. Geeft per wijziging tijd, type, operatie,
+     * gewijzigde velden, gebruiker en de bijbehorende campagne/adgroup terug.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function recentChanges(int $limit = 50): array
+    {
+        $limit = max(1, min($limit, 1000));
+
+        // change_event mag niet verder terug dan 30 dagen (strikt); 29 is veilig.
+        $from = \Carbon\CarbonImmutable::now()->subDays(29)->format('Y-m-d H:i:s');
+        $to = \Carbon\CarbonImmutable::now()->format('Y-m-d H:i:s');
+
+        $gaql = <<<GAQL
+            SELECT
+                change_event.change_date_time,
+                change_event.change_resource_type,
+                change_event.resource_change_operation,
+                change_event.changed_fields,
+                change_event.user_email,
+                campaign.name,
+                ad_group.name
+            FROM change_event
+            WHERE change_event.change_date_time >= '{$from}' AND change_event.change_date_time <= '{$to}'
+            ORDER BY change_event.change_date_time DESC
+            LIMIT {$limit}
+            GAQL;
+
+        $out = [];
+        foreach ($this->search($gaql) as $row) {
+            $ce = $row['changeEvent'] ?? [];
+            $out[] = [
+                'time' => $ce['changeDateTime'] ?? null,
+                'resource_type' => $ce['changeResourceType'] ?? null,
+                'operation' => $ce['resourceChangeOperation'] ?? null,
+                'changed_fields' => $ce['changedFields'] ?? null,
+                'user' => $ce['userEmail'] ?? null,
+                'campaign' => $row['campaign']['name'] ?? null,
+                'ad_group' => $row['adGroup']['name'] ?? null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Wissel het refresh token in voor een access token (OAuth2).
      */
     protected function accessToken(): string

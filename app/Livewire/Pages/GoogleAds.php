@@ -5,6 +5,7 @@ namespace App\Livewire\Pages;
 use App\Livewire\Concerns\HasDashboardFilters;
 use App\Models\GoogleAdStat;
 use App\Services\DashboardCache;
+use App\Services\GoogleAdsClient;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -93,6 +94,22 @@ class GoogleAds extends Component
         });
 
         return collect($cached)->map(fn (array $row) => (object) $row)->values();
+    }
+
+    /**
+     * Laatste wijzigingen in het Google Ads-account (change history, max 30
+     * dagen). Niet periode-afhankelijk; kort gecached om API-calls te sparen.
+     */
+    #[Computed]
+    public function recentChanges(): array
+    {
+        return app(DashboardCache::class)->remember('google-changes', function () {
+            try {
+                return app(GoogleAdsClient::class)->recentChanges(50);
+            } catch (\Throwable $e) {
+                return [];
+            }
+        });
     }
 
     public function render()

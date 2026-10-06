@@ -3,7 +3,7 @@
 <div class="flex flex-col gap-4 lg:gap-5">
     @include('partials.dashboard-filters')
 
-    <div class="transition-opacity" wire:loading.class.delay="opacity-40">
+    <div class="flex flex-col gap-4 transition-opacity lg:gap-5" wire:loading.class.delay="opacity-40">
         @if ($ga['impressions'] === 0 && $ga['clicks'] === 0)
             <div class="rounded-lg bg-surface p-6 text-center text-sm text-muted">
                 Nog geen Google Ads-data voor deze periode. Koppel de Google Ads API
@@ -54,6 +54,70 @@
                                     <td class="py-3 pr-3 text-right tabular-nums text-fg">{{ $this->nlInt($c->conv_qlead) }}</td>
                                 </tr>
                             @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Recente wijzigingen (Google Ads change history, max 30 dagen) --}}
+            @php
+                $changes = $this->recentChanges;
+                $resLabels = [
+                    'CAMPAIGN' => 'Campagne',
+                    'CAMPAIGN_BUDGET' => 'Campagnebudget',
+                    'CAMPAIGN_CRITERION' => 'Campagne-targeting',
+                    'CAMPAIGN_BID_MODIFIER' => 'Bodaanpassing',
+                    'AD_GROUP' => 'Advertentiegroep',
+                    'AD_GROUP_AD' => 'Advertentie',
+                    'AD_GROUP_CRITERION' => 'Zoekwoord / targeting',
+                    'AD_GROUP_BID_MODIFIER' => 'Bodaanpassing',
+                    'AD' => 'Advertentie',
+                    'FEED' => 'Feed',
+                    'FEED_ITEM' => 'Feed-item',
+                ];
+                $opMap = [
+                    'CREATE' => ['Toegevoegd', 'text-positive'],
+                    'UPDATE' => ['Gewijzigd', 'text-fg'],
+                    'REMOVE' => ['Verwijderd', 'text-negative'],
+                ];
+            @endphp
+            <div class="rounded-lg bg-surface p-4 sm:p-5">
+                <h2 class="text-base font-medium text-fg">Recente wijzigingen</h2>
+                <p class="mb-4 text-xs text-subtle">Wijzigingen in het Google Ads-account · laatste 30 dagen</p>
+                <div class="max-h-[360px] overflow-auto">
+                    <table class="w-full min-w-[640px] text-sm">
+                        <thead class="sticky top-0 z-10 bg-surface">
+                            <tr class="border-b border-border text-left text-xs text-subtle">
+                                <th class="bg-surface py-2 pr-3 font-normal">Tijd</th>
+                                <th class="bg-surface py-2 pr-3 font-normal">Wijziging</th>
+                                <th class="bg-surface py-2 pr-3 font-normal">Campagne</th>
+                                <th class="bg-surface py-2 pr-3 font-normal">Door</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($changes as $ch)
+                                @php
+                                    [$opLabel, $opTone] = $opMap[$ch['operation']] ?? [ucfirst(strtolower((string) $ch['operation'])), 'text-muted'];
+                                    $resLabel = $resLabels[$ch['resource_type']] ?? \Illuminate\Support\Str::of((string) $ch['resource_type'])->replace('_', ' ')->lower()->ucfirst();
+                                    $fields = trim((string) $ch['changed_fields']);
+                                @endphp
+                                <tr class="border-b border-border/60 align-top last:border-0">
+                                    <td class="whitespace-nowrap py-3 pr-3 tabular-nums text-muted">
+                                        {{ $ch['time'] ? \Carbon\CarbonImmutable::parse($ch['time'])->locale('nl')->isoFormat('D MMM HH:mm') : '—' }}
+                                    </td>
+                                    <td class="py-3 pr-3">
+                                        <span class="font-medium {{ $opTone }}">{{ $opLabel }}</span>
+                                        <span class="text-muted">· {{ $resLabel }}</span>
+                                        @if ($fields !== '')
+                                            <div class="text-xs text-subtle">{{ \Illuminate\Support\Str::limit(str_replace(['campaign.', 'ad_group.', 'ad_group_ad.', 'ad.'], '', $fields), 80) }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 pr-3 text-fg">{{ $ch['campaign'] ?? '—' }}</td>
+                                    <td class="py-3 pr-3 text-muted">{{ $ch['user'] ? \Illuminate\Support\Str::before($ch['user'], '@') : '—' }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="py-10 text-center text-subtle">Geen wijzigingen in de laatste 30 dagen.</td></tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
