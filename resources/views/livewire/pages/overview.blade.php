@@ -251,18 +251,18 @@
             @endif
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="max-h-[328px] overflow-auto">
             <table class="w-full min-w-[820px] text-sm">
-                <thead>
+                <thead class="sticky top-0 z-10 bg-surface">
                     <tr class="border-b border-border text-left text-xs text-subtle">
-                        <th class="py-2 pr-3 font-normal">Tijd</th>
-                        <th class="py-2 pr-3 font-normal">Type</th>
-                        <th class="py-2 pr-3 font-normal">Offer</th>
-                        <th class="py-2 pr-3 font-normal">Source</th>
-                        <th class="py-2 pr-3 font-normal">Land</th>
-                        <th class="py-2 pr-3 font-normal">Zoekwoord / ad</th>
-                        <th class="py-2 pr-3 font-normal">Device</th>
-                        <th class="py-2 pr-3 text-right font-normal">Payout</th>
+                        <th class="bg-surface py-2 pr-3 font-normal">Tijd</th>
+                        <th class="bg-surface py-2 pr-3 font-normal">Type</th>
+                        <th class="bg-surface py-2 pr-3 font-normal">Offer</th>
+                        <th class="bg-surface py-2 pr-3 font-normal">Source</th>
+                        <th class="bg-surface py-2 pr-3 font-normal">Land</th>
+                        <th class="bg-surface py-2 pr-3 font-normal">Zoekwoord / ad</th>
+                        <th class="bg-surface py-2 pr-3 font-normal">Device</th>
+                        <th class="bg-surface py-2 pr-3 text-right font-normal">Payout</th>
                     </tr>
                 </thead>
                 <tbody>
