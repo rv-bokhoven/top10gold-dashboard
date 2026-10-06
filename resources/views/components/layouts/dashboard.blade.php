@@ -51,8 +51,7 @@
             {{-- Top: logo + controls --}}
             <div class="flex h-14 shrink-0 items-center gap-1 px-3">
                 <a href="{{ route('dashboard') }}" wire:navigate class="flex shrink-0 items-center" :class="collapsed && 'mx-auto'" title="top10">
-                    <img x-show="!collapsed" src="{{ asset('images/logo.svg') }}" alt="top10" class="h-6 w-auto">
-                    <span x-show="collapsed" x-cloak class="block size-8 overflow-hidden">
+                    <span class="block size-8 overflow-hidden">
                         <img src="{{ asset('images/logo.svg') }}" alt="top10" class="h-8 w-auto max-w-none">
                     </span>
                 </a>
@@ -170,7 +169,9 @@
             x-transition:leave-end="-translate-x-full"
             class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar lg:hidden">
             <div class="flex h-14 shrink-0 items-center gap-2 px-4 text-fg">
-                <img src="{{ asset('images/logo.svg') }}" alt="top10" class="h-6 w-auto">
+                <span class="block size-8 overflow-hidden">
+                    <img src="{{ asset('images/logo.svg') }}" alt="top10" class="h-8 w-auto max-w-none">
+                </span>
                 <button type="button" @click="mobile = false" class="ml-auto flex size-9 items-center justify-center rounded-md text-muted hover:bg-elevated">
                     <x-lucide name="x" class="size-5" />
                 </button>
@@ -231,7 +232,9 @@
                 <button type="button" @click="mobile = true" class="flex size-9 items-center justify-center rounded-md text-muted hover:bg-elevated">
                     <x-lucide name="menu" class="size-6" />
                 </button>
-                <img src="{{ asset('images/logo.svg') }}" alt="top10" class="h-6 w-auto">
+                <span class="block size-7 overflow-hidden">
+                    <img src="{{ asset('images/logo.svg') }}" alt="top10" class="h-7 w-auto max-w-none">
+                </span>
             </div>
 
             <main class="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 py-4 pb-10 lg:gap-5 lg:px-8 lg:py-6">
