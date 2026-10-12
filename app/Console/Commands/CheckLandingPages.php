@@ -37,14 +37,31 @@ class CheckLandingPages extends Command
             $ok = false;
             $error = null;
 
-            try {
-                $response = Http::timeout(15)
-                    ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; RedTrackDashboard/1.0)'])
-                    ->get($url);
-                $status = $response->status();
-                $ok = $response->successful(); // 2xx
-            } catch (Throwable $e) {
-                $error = $e->getMessage();
+            // Max 2 pogingen: alleen opnieuw proberen bij een verbindings-/
+            // time-outfout (transient). Een 404/5xx komt als response binnen en
+            // wordt niet herhaald.
+            for ($attempt = 1; $attempt <= 2; $attempt++) {
+                try {
+                    // Alleen de response-headers/status lezen (stream): de body
+                    // downloaden we niet, zodat een trage of grote HTML nooit een
+                    // body-download-timeout (cURL 28) veroorzaakt — dat gaf vals
+                    // "offline"-alarm terwijl de pagina gewoon werkt.
+                    $response = Http::connectTimeout(10)
+                        ->timeout(20)
+                        ->withOptions(['stream' => true])
+                        ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; RedTrackDashboard/1.0)'])
+                        ->get($url);
+
+                    $status = $response->status();
+                    $ok = $response->successful(); // 2xx
+                    $error = null;
+                    break;
+                } catch (Throwable $e) {
+                    $error = $e->getMessage();
+                    if ($attempt === 1) {
+                        usleep(1_000_000); // 1s wachten en één keer opnieuw
+                    }
+                }
             }
 
             $hash = sha1($url);
