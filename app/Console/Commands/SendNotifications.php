@@ -144,7 +144,7 @@ class SendNotifications extends Command
             if (! empty($n['offer'])) {
                 $line .= ' → '.e($n['offer']);
             }
-            $line .= ' ('.$n['ts']->format('H:i').')';
+            $line .= ' ('.$n['ts']->setTimezone('Europe/Amsterdam')->format('H:i').')';
             if ($n['payout'] > 0) {
                 $line .= ' — $'.number_format($n['payout'], 2);
             }

@@ -272,7 +272,7 @@
                         @endphp
                         <tr class="border-b border-border/60 align-top last:border-0">
                             <td class="whitespace-nowrap py-3 pr-3 tabular-nums text-muted">
-                                {{ $l['time'] ? \Carbon\CarbonImmutable::parse($l['time'])->locale('nl')->isoFormat('D MMM HH:mm') : '—' }}
+                                {{ $l['time'] ? \Carbon\CarbonImmutable::parse($l['time'])->setTimezone('Europe/Amsterdam')->locale('nl')->isoFormat('D MMM HH:mm') : '—' }}
                             </td>
                             <td class="py-3 pr-3">
                                 <span class="inline-flex rounded-full bg-elevated px-2 py-0.5 text-xs font-medium {{ $tone }}">{{ $l['type_label'] }}</span>

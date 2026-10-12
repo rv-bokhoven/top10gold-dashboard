@@ -48,11 +48,16 @@ Route::get('/cron/notify', function (Request $request) {
 
     $output = '';
 
-    // Landingspagina's elk uur verversen zodat offline/404 tijdig wordt
-    // gemeld (vereist de Google Ads-koppeling voor de live final URLs).
+    // Landingspagina's hooguit ~1×/uur checken — ook als dit endpoint vaker
+    // wordt aangeroepen voor snellere conversie-meldingen (vereist de Google
+    // Ads-koppeling voor de live final URLs).
     if (filled(config('google_ads.developer_token'))) {
-        Artisan::call('landing-pages:check');
-        $output .= trim(Artisan::output())."\n";
+        $last = \App\Models\Setting::get('landing.last_check');
+        if (! $last || \Carbon\CarbonImmutable::parse($last)->lt(\Carbon\CarbonImmutable::now()->subMinutes(55))) {
+            Artisan::call('landing-pages:check');
+            $output .= trim(Artisan::output())."\n";
+            \App\Models\Setting::put('landing.last_check', \Carbon\CarbonImmutable::now()->toIso8601String());
+        }
     }
 
     Artisan::call('notifications:run');
