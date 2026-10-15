@@ -74,11 +74,33 @@ class RedTrackClient
     {
         // sub6 = de Google-campagne-id, waarmee we Search/PMax e.d. kunnen
         // splitsen. Elke rij wordt nu (datum, offer, source, campagne).
-        return $this->report([
+        return $this->reportAllPages([
             'group' => 'date,offer,source,sub6',
             'date_from' => $from,
             'date_to' => $to,
         ]);
+    }
+
+    /**
+     * Haalt een rapport over álle pagina's op. RedTrack's /report geeft
+     * maximaal `per` rijen per pagina; door de campagne-splitsing (sub6)
+     * lopen grote periodes daar overheen, dus moeten we doorpagineren.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<int, array<string, mixed>>
+     */
+    protected function reportAllPages(array $params, int $per = 1000): array
+    {
+        $all = [];
+        $page = 1;
+
+        do {
+            $rows = $this->report(array_merge($params, ['per' => $per, 'page' => $page]));
+            $all = array_merge($all, $rows);
+            $page++;
+        } while (count($rows) === $per && $page <= 100); // veiligheidscap: 100k rijen
+
+        return $all;
     }
 
     /**
