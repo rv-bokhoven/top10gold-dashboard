@@ -93,6 +93,27 @@ class SyncRedTrack extends Command
             ];
         }
 
+        // Ontdubbelen op de unieke sleutel: meerdere sub6-waarden kunnen op
+        // dezelfde (lege) campagne-id uitkomen. Postgres weigert dubbele rijen
+        // in één upsert-batch ("cannot affect row a second time"), dus tellen
+        // we ze hier alvast bij elkaar op.
+        $merged = [];
+        foreach ($records as $rec) {
+            $key = $rec['stat_date'].'|'.$rec['offer_id'].'|'.$rec['source'].'|'.$rec['campaign_id'];
+
+            if (! isset($merged[$key])) {
+                $merged[$key] = $rec;
+
+                continue;
+            }
+
+            foreach (['lp_views', 'lp_clicks', 'clicks', 'leads', 'qleads', 'sales', 'conversions', 'cost', 'revenue'] as $f) {
+                $merged[$key][$f] += $rec[$f];
+            }
+            $merged[$key]['offer_title'] ??= $rec['offer_title'];
+        }
+        $records = array_values($merged);
+
         // --fresh: maak het bereik eerst leeg zodat oude (vervuilde) rijen zonder
         // per-source-splitsing niet als spookrijen achterblijven.
         if ($this->option('fresh')) {
@@ -100,7 +121,7 @@ class SyncRedTrack extends Command
             $this->info("Fresh: {$deleted} bestaande rijen in {$from}..{$to} verwijderd.");
         }
 
-        // Upsert: bestaande (datum, offer, source)-rijen worden bijgewerkt, nieuwe toegevoegd.
+        // Upsert: bestaande (datum, offer, source, campagne)-rijen bijwerken, nieuwe toevoegen.
         foreach (array_chunk($records, 500) as $chunk) {
             OfferStat::upsert(
                 $chunk,
