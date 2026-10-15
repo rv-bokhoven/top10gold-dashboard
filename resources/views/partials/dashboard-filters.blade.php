@@ -14,7 +14,10 @@
     }
 
     $sources = config('redtrack.sources');
-    $pageTitle = $source === 'all' ? 'Alle campagnes' : ($sources[$source]['label'] ?? ucfirst($source));
+    $campaignOptions = $this->campaignOptions();
+    $pageTitle = $campaign !== 'all'
+        ? ($campaignOptions[$campaign] ?? $campaign)
+        : ($source === 'all' ? 'Alle campagnes' : ($sources[$source]['label'] ?? ucfirst($source)));
     $periodLabel = $this::PERIODS[$period] ?? 'Aangepast';
 @endphp
 
@@ -25,6 +28,28 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
+        {{-- Campagne-switcher (live Google Ads-campagnes) --}}
+        @if (count($campaignOptions) > 1)
+            <div x-data="{ open: false }" @click.outside="open = false" class="relative">
+                <button type="button" @click="open = !open"
+                    class="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-normal text-fg transition hover:bg-elevated">
+                    <x-lucide name="megaphone" class="size-4 text-muted" />
+                    <span class="max-w-[150px] truncate">{{ $campaignOptions[$campaign] ?? 'Alle campagnes' }}</span>
+                    <x-lucide name="chevron-down" class="size-4 text-muted" />
+                </button>
+                <div x-show="open" x-cloak x-transition.opacity
+                    class="absolute right-0 z-30 mt-1 w-56 rounded-md border border-border bg-surface p-1 shadow-border">
+                    @foreach ($campaignOptions as $key => $label)
+                        <button type="button" wire:click="$set('campaign', '{{ $key }}')" @click="open = false"
+                            class="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm text-fg transition hover:bg-elevated">
+                            <span class="truncate">{{ $label }}</span>
+                            @if ((string) $campaign === (string) $key)<x-lucide name="check" class="size-4 shrink-0 text-muted" />@endif
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         {{-- Source toggle --}}
         <div class="hidden h-9 shrink-0 overflow-hidden rounded-md border border-border sm:inline-flex">
             @foreach (['all' => 'Alle'] + collect($sources)->map(fn ($c) => $c['label'])->all() as $val => $label)

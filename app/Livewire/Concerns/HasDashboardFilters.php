@@ -6,6 +6,7 @@ use App\Models\OfferStat;
 use App\Models\Setting;
 use App\Models\StatCorrection;
 use App\Services\DashboardCache;
+use App\Services\GoogleAdsClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -47,6 +48,10 @@ trait HasDashboardFilters
     // Traffic-source filter: 'all' of een key uit config('redtrack.sources').
     #[Url]
     public string $source = 'all';
+
+    // Campagne-filter: 'all' of een Google-campagne-id (= RedTrack sub6).
+    #[Url]
+    public string $campaign = 'all';
 
     public ?string $lastSyncMessage = null;
 
@@ -202,17 +207,60 @@ trait HasDashboardFilters
         );
     }
 
+    /** Campagne-filter op een offer_stats/google_ad_stats-query (campaign_id). */
+    public function applyCampaignFilter($query)
+    {
+        return $query->when(
+            $this->campaign !== 'all',
+            fn ($q) => $q->where('campaign_id', $this->campaign),
+        );
+    }
+
+    /**
+     * Opties voor de campagne-switcher: 'all' + de live (enabled) Google-
+     * campagnes (id => naam). Kort gecached; faalt stil terug op alleen 'all'.
+     *
+     * @return array<string, string>
+     */
+    public function campaignOptions(): array
+    {
+        $live = app(DashboardCache::class)->remember('campaign-options', function () {
+            if (blank(config('google_ads.developer_token'))) {
+                return [];
+            }
+
+            try {
+                return app(GoogleAdsClient::class)->liveCampaigns();
+            } catch (\Throwable $e) {
+                return [];
+            }
+        });
+
+        $options = ['all' => 'Alle campagnes'];
+        foreach ($live as $c) {
+            $options[$c['id']] = $c['name'];
+        }
+
+        // Zorg dat een gekozen (maar bv. gepauzeerde) campagne zichtbaar blijft.
+        if ($this->campaign !== 'all' && ! isset($options[$this->campaign])) {
+            $options[$this->campaign] = $this->campaign;
+        }
+
+        return $options;
+    }
+
     protected function aggregateByDate(CarbonImmutable $from, CarbonImmutable $to): Collection
     {
         $key = implode(':', [
             'daily',
             $this->source,
+            $this->campaign,
             $from->toDateString(),
             $to->toDateString(),
         ]);
 
         $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
-            $rows = $this->applySourceFilter(OfferStat::query())
+            $rows = $this->applyCampaignFilter($this->applySourceFilter(OfferStat::query()))
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
                 ->selectRaw('stat_date,
                     SUM(lp_views) as lp_views, SUM(lp_clicks) as lp_clicks,
@@ -233,6 +281,12 @@ trait HasDashboardFilters
     /** Handmatige correcties binnen de periode, gefilterd op de gekozen source. */
     protected function correctionDeltas(CarbonImmutable $from, CarbonImmutable $to): Collection
     {
+        // Correcties hebben geen campagne-dimensie; bij een campagne-filter
+        // laten we ze weg (anders zouden ze willekeurig bij één campagne tellen).
+        if ($this->campaign !== 'all') {
+            return collect();
+        }
+
         return $this->applySourceFilter(StatCorrection::query())
             ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
             ->get();
@@ -316,6 +370,10 @@ trait HasDashboardFilters
         CarbonImmutable $to,
         string $offerId,
     ): Collection {
+        if ($this->campaign !== 'all') {
+            return $rows;
+        }
+
         $corrections = $this->applySourceFilter(StatCorrection::query())
             ->where('offer_id', $offerId)
             ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])

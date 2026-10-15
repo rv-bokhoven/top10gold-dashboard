@@ -26,10 +26,10 @@ class OfferDetail extends Component
     #[Computed]
     public function offerTitle(): string
     {
-        $key = 'offer-title:'.$this->source.':'.$this->offerId;
+        $key = 'offer-title:'.$this->source.':'.$this->campaign.':'.$this->offerId;
 
         return app(DashboardCache::class)->remember($key, function () {
-            $title = $this->applySourceFilter(OfferStat::query())
+            $title = $this->applyCampaignFilter($this->applySourceFilter(OfferStat::query()))
                 ->offers()
                 ->where('offer_id', $this->offerId)
                 ->max('offer_title');
@@ -46,13 +46,14 @@ class OfferDetail extends Component
         $key = implode(':', [
             'offer-days',
             $this->source,
+            $this->campaign,
             $this->offerId,
             $from->toDateString(),
             $to->toDateString(),
         ]);
 
         $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
-            $rows = $this->applySourceFilter(OfferStat::query())
+            $rows = $this->applyCampaignFilter($this->applySourceFilter(OfferStat::query()))
                 ->offers()
                 ->where('offer_id', $this->offerId)
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])

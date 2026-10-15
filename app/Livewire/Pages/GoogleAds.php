@@ -22,10 +22,10 @@ class GoogleAds extends Component
     {
         [$from, $to] = $this->range();
 
-        $key = implode(':', ['google-totals', $from->toDateString(), $to->toDateString()]);
+        $key = implode(':', ['google-totals', $this->campaign, $from->toDateString(), $to->toDateString()]);
 
         return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
-            $row = GoogleAdStat::query()
+            $row = $this->applyCampaignFilter(GoogleAdStat::query())
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
                 ->selectRaw('SUM(impressions) as impressions, SUM(clicks) as clicks,
                     SUM(cost) as cost, SUM(conversions) as conversions')
@@ -54,10 +54,10 @@ class GoogleAds extends Component
     {
         [$from, $to] = $this->range();
 
-        $key = implode(':', ['google-campaigns', $from->toDateString(), $to->toDateString()]);
+        $key = implode(':', ['google-campaigns', $this->campaign, $from->toDateString(), $to->toDateString()]);
 
         $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
-            return GoogleAdStat::query()
+            return $this->applyCampaignFilter(GoogleAdStat::query())
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
                 ->selectRaw('campaign_id, MAX(campaign_name) as campaign_name,
                     SUM(impressions) as impressions, SUM(clicks) as clicks,

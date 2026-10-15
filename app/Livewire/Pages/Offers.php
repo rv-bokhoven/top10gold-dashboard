@@ -38,10 +38,10 @@ class Offers extends Component
     {
         [$from, $to] = $this->range();
 
-        $key = implode(':', ['offers', $this->source, $from->toDateString(), $to->toDateString()]);
+        $key = implode(':', ['offers', $this->source, $this->campaign, $from->toDateString(), $to->toDateString()]);
 
         $cached = app(DashboardCache::class)->remember($key, function () use ($from, $to) {
-            $rows = $this->applySourceFilter(OfferStat::query())
+            $rows = $this->applyCampaignFilter($this->applySourceFilter(OfferStat::query()))
                 ->offers()
                 ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
                 ->selectRaw('offer_id, MAX(offer_title) as offer_title,

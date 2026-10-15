@@ -72,8 +72,10 @@ class RedTrackClient
      */
     public function reportByDateSource(string $from, string $to): array
     {
+        // sub6 = de Google-campagne-id, waarmee we Search/PMax e.d. kunnen
+        // splitsen. Elke rij wordt nu (datum, offer, source, campagne).
         return $this->report([
-            'group' => 'date,offer,source',
+            'group' => 'date,offer,source,sub6',
             'date_from' => $from,
             'date_to' => $to,
         ]);

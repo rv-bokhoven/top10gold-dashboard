@@ -242,8 +242,8 @@ class Overview extends Component
     #[Computed]
     public function monthlyStats(): Collection
     {
-        $cached = app(DashboardCache::class)->remember('monthly:'.$this->source, function () {
-            $min = $this->applySourceFilter(OfferStat::query())->min('stat_date');
+        $cached = app(DashboardCache::class)->remember('monthly:'.$this->source.':'.$this->campaign, function () {
+            $min = $this->applyCampaignFilter($this->applySourceFilter(OfferStat::query()))->min('stat_date');
 
             if (! $min) {
                 return [];
@@ -320,7 +320,7 @@ class Overview extends Component
     public function recentLeads(): array
     {
         [$from, $to] = $this->range();
-        $key = implode(':', ['recent-leads', $this->source, $from->toDateString(), $to->toDateString()]);
+        $key = implode(':', ['recent-leads', $this->source, $this->campaign, $from->toDateString(), $to->toDateString()]);
 
         return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
             try {
@@ -343,6 +343,10 @@ class Overview extends Component
 
                 $sourceKey = $sourceMap[$c['source'] ?? ''] ?? null;
                 if ($this->source !== 'all' && $sourceKey !== $this->source) {
+                    continue;
+                }
+
+                if ($this->campaign !== 'all' && (string) ($c['sub6'] ?? '') !== $this->campaign) {
                     continue;
                 }
 

@@ -114,6 +114,35 @@ class GoogleAdsClient
     }
 
     /**
+     * Live (enabled) campagnes: id, naam en kanaaltype. Voor de campagne-switcher.
+     *
+     * @return array<int, array{id: string, name: string, type: string}>
+     */
+    public function liveCampaigns(): array
+    {
+        $gaql = <<<'GAQL'
+            SELECT campaign.id, campaign.name, campaign.advertising_channel_type
+            FROM campaign
+            WHERE campaign.status = 'ENABLED'
+            ORDER BY campaign.name
+            GAQL;
+
+        $out = [];
+        foreach ($this->search($gaql) as $row) {
+            $c = $row['campaign'] ?? [];
+            if (! empty($c['id'])) {
+                $out[] = [
+                    'id' => (string) $c['id'],
+                    'name' => $c['name'] ?? (string) $c['id'],
+                    'type' => $c['advertisingChannelType'] ?? '',
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Recente wijzigingen in het account (change history). Google Ads bewaart
      * dit maximaal 30 dagen. Geeft per wijziging tijd, type, operatie,
      * gewijzigde velden, gebruiker en de bijbehorende campagne/adgroup terug.

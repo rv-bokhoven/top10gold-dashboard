@@ -61,6 +61,13 @@ class SyncRedTrack extends Command
 
             $offerId = ($row['offer_id'] ?? '') ?: OfferStat::CAMPAIGN;
 
+            // sub6 = Google-campagne-id. De onopgeloste macro {campaignid} en
+            // lege waarden boeken we als '' (onbekende campagne).
+            $campaignId = (string) ($row['sub6'] ?? '');
+            if ($campaignId === '{campaignid}') {
+                $campaignId = '';
+            }
+
             $leads = $sumCols($row, 'lead');
             $qleads = $sumCols($row, 'qlead');
             $sales = $sumCols($row, 'sale');
@@ -69,6 +76,7 @@ class SyncRedTrack extends Command
                 'stat_date' => $row['date'],
                 'offer_id' => $offerId,
                 'source' => $sourceKey,
+                'campaign_id' => $campaignId,
                 'offer_title' => ($row['offer'] ?? '') ?: null,
                 'lp_views' => (int) ($row['lp_views'] ?? 0),
                 'lp_clicks' => (int) ($row['lp_clicks'] ?? 0),
@@ -96,7 +104,7 @@ class SyncRedTrack extends Command
         foreach (array_chunk($records, 500) as $chunk) {
             OfferStat::upsert(
                 $chunk,
-                ['stat_date', 'offer_id', 'source'],
+                ['stat_date', 'offer_id', 'source', 'campaign_id'],
                 ['offer_title', 'lp_views', 'lp_clicks', 'clicks', 'leads',
                     'qleads', 'sales', 'conversions', 'cost', 'revenue',
                     'synced_at', 'updated_at'],
