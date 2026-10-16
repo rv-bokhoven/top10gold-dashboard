@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Concerns;
 
+use App\Models\GoogleAdStat;
 use App\Models\OfferStat;
 use App\Models\Setting;
 use App\Models\StatCorrection;
@@ -272,10 +273,60 @@ trait HasDashboardFilters
                 ->orderBy('stat_date')
                 ->get();
 
+            $rows = $this->applyGoogleAdsCost($rows, $from, $to);
+
             return $this->serializeStatRows($this->mergeDateCorrections($rows, $from, $to));
         });
 
         return $this->restoreStatRows($cached);
+    }
+
+    /**
+     * Vervang de kosten van Google-campagnes door de echte Google Ads-spend
+     * (google_ad_stats). RedTrack rapporteert cost structureel te hoog en mist
+     * Performance Max volledig. Bing houdt z'n RedTrack-kosten. Werkt per dag,
+     * respecteert de campagne-filter en valt terug op RedTrack als Google Ads
+     * (nog) niet gesynct is voor de periode.
+     */
+    protected function applyGoogleAdsCost(Collection $rows, CarbonImmutable $from, CarbonImmutable $to): Collection
+    {
+        if ($this->source === 'bing') {
+            return $rows;
+        }
+
+        $norm = fn ($d) => CarbonImmutable::parse((string) $d)->toDateString();
+
+        $gaCost = $this->applyCampaignFilter(GoogleAdStat::query())
+            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw('stat_date, SUM(cost) as cost')
+            ->groupBy('stat_date')
+            ->get()
+            ->mapWithKeys(fn ($r) => [$norm($r->stat_date) => (float) $r->cost]);
+
+        // Geen Google Ads-data in deze periode → niets corrigeren.
+        if ($gaCost->isEmpty()) {
+            return $rows;
+        }
+
+        $rtGoogle = $this->applyCampaignFilter(OfferStat::query())
+            ->where('source', 'google')
+            ->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw('stat_date, SUM(cost) as cost')
+            ->groupBy('stat_date')
+            ->get()
+            ->mapWithKeys(fn ($r) => [$norm($r->stat_date) => (float) $r->cost]);
+
+        // offer_stats.cost is "native" USD (RedTrack-account), maar Google Ads
+        // levert kosten in EUR (account-valuta). Reken de Google Ads-kost naar
+        // USD zodat hij in dezelfde basis zit als de rest van de pijplijn.
+        $rate = $this->fxRate();
+
+        foreach ($rows as $row) {
+            $d = $norm($row->stat_date);
+            $row->cost = (float) $row->cost - ($rtGoogle[$d] ?? 0) + ($gaCost[$d] ?? 0) * $rate;
+        }
+
+        return $rows;
     }
 
     /** Handmatige correcties binnen de periode, gefilterd op de gekozen source. */

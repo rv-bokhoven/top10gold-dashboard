@@ -71,6 +71,28 @@ class GoogleAdsClient
     }
 
     /**
+     * Metrics op campagne-niveau per dag — voor álle campagnetypes, inclusief
+     * Performance Max (die geen ad_group_ad heeft en dus buiten reportAdsByDate
+     * valt). Gebruikt om de kosten van zulke campagnes alsnog vast te leggen.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function reportCampaignsByDate(string $from, string $to): array
+    {
+        $gaql = <<<GAQL
+            SELECT
+                segments.date,
+                campaign.id, campaign.name,
+                metrics.impressions, metrics.clicks, metrics.cost_micros,
+                metrics.conversions, metrics.conversions_value
+            FROM campaign
+            WHERE segments.date BETWEEN '{$from}' AND '{$to}'
+            GAQL;
+
+        return $this->search($gaql);
+    }
+
+    /**
      * Conversies per advertentie/dag uitgesplitst naar conversie-actie. Aparte
      * query omdat segmenteren op conversion_action de kernmetrics zou dupliceren.
      *

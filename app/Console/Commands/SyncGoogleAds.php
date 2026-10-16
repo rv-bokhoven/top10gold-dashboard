@@ -87,6 +87,45 @@ class SyncGoogleAds extends Command
             ];
         }
 
+        // Campagnes zonder ad-niveau data (bv. Performance Max) op campagne-
+        // niveau toevoegen, zodat hun kosten toch worden vastgelegd. Een
+        // synthetische ad_id voorkomt botsing met echte advertenties.
+        $adCampaignIds = collect($records)->pluck('campaign_id')->filter()->unique()->flip();
+
+        try {
+            $campaignRows = $client->reportCampaignsByDate($from, $to);
+        } catch (Throwable $e) {
+            $campaignRows = [];
+        }
+
+        foreach ($campaignRows as $row) {
+            $cid = (string) ($row['campaign']['id'] ?? '');
+            if ($cid === '' || $adCampaignIds->has($cid)) {
+                continue; // al gedekt door ad-niveau data
+            }
+
+            $metrics = $row['metrics'] ?? [];
+            $records[] = [
+                'conv_lpclick' => 0, 'conv_lead' => 0, 'conv_qlead' => 0, 'conv_sale' => 0,
+                'stat_date' => $row['segments']['date'],
+                'campaign_id' => $cid,
+                'campaign_name' => $row['campaign']['name'] ?? null,
+                'ad_group_id' => '',
+                'ad_group_name' => null,
+                'ad_id' => 'campaign:'.$cid,
+                'ad_name' => null,
+                'ad_type' => 'CAMPAIGN',
+                'impressions' => (int) ($metrics['impressions'] ?? 0),
+                'clicks' => (int) ($metrics['clicks'] ?? 0),
+                'cost' => round(((int) ($metrics['costMicros'] ?? 0)) / 1_000_000, 2),
+                'conversions' => (float) ($metrics['conversions'] ?? 0),
+                'conversions_value' => (float) ($metrics['conversionsValue'] ?? 0),
+                'synced_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
         foreach (array_chunk($records, 500) as $chunk) {
             GoogleAdStat::upsert(
                 $chunk,
