@@ -1,22 +1,22 @@
 <div class="flex min-h-screen items-center justify-center px-4">
     <div class="w-full max-w-sm">
-        <div class="mb-8 text-center">
-            <flux:heading size="xl">{{ config('app.name') }}</flux:heading>
-            <flux:subheading>Sign in to view the campaign stats</flux:subheading>
+        <div class="mb-8 flex flex-col items-center gap-4 text-center">
+            <img src="{{ asset('images/logo.svg') }}" alt="top10" class="h-8 w-auto">
+            <p class="text-sm text-muted">Log in om de campagnestatistieken te bekijken</p>
         </div>
 
-        <form wire:submit="authenticate" class="flex flex-col gap-6 rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-950/[0.03] dark:border-zinc-800 dark:bg-zinc-900">
-            <flux:input
-                wire:model="password"
-                type="password"
-                label="Password"
-                placeholder="Shared password"
-                autofocus
-            />
+        <form wire:submit="authenticate" class="flex flex-col gap-4 rounded-lg bg-surface p-6 shadow-border">
+            <div class="flex flex-col gap-1.5">
+                <label for="password" class="text-xs text-muted">Wachtwoord</label>
+                <input id="password" wire:model="password" type="password" autofocus placeholder="Gedeeld wachtwoord"
+                    class="h-10 rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-subtle focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-border-strong/20">
+                @error('password') <span class="text-xs text-negative">{{ $message }}</span> @enderror
+            </div>
 
-            <flux:button type="submit" variant="primary" class="w-full">
-                Sign in
-            </flux:button>
+            <button type="submit"
+                class="inline-flex h-10 w-full items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-fg transition hover:opacity-90">
+                Inloggen
+            </button>
         </form>
     </div>
 </div>

@@ -8,19 +8,22 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-#[Title('Sign in')]
+#[Title('Inloggen')]
 class Login extends Component
 {
     public string $password = '';
 
     public function authenticate(): void
     {
-        $this->validate(['password' => 'required']);
+        $this->validate(
+            ['password' => 'required'],
+            ['password.required' => 'Vul je wachtwoord in.'],
+        );
 
         $expected = (string) config('dashboard.password');
 
         if ($expected === '' || ! hash_equals($expected, $this->password)) {
-            $this->addError('password', 'Incorrect password.');
+            $this->addError('password', 'Onjuist wachtwoord.');
 
             return;
         }
