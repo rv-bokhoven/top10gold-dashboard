@@ -99,7 +99,24 @@ class SendNotifications extends Command
             return;
         }
 
-        $names = GoogleAdStat::query()->whereNotNull('campaign_name')->pluck('campaign_name', 'campaign_id');
+        // Campagne-id → naam. Eerst de gesyncte Google Ads-stats, aangevuld met
+        // de live campagnes (zodat een nieuwe campagne zonder stats, bv. een net
+        // gestarte PMax, ook z'n echte naam toont i.p.v. de RedTrack-campagne).
+        $names = GoogleAdStat::query()->whereNotNull('campaign_name')->pluck('campaign_name', 'campaign_id')->toArray();
+
+        if (filled(config('google_ads.developer_token'))) {
+            $live = \Illuminate\Support\Facades\Cache::remember('notify.live-campaigns', now()->addHour(), function () {
+                try {
+                    return app(\App\Services\GoogleAdsClient::class)->liveCampaigns();
+                } catch (\Throwable $e) {
+                    return [];
+                }
+            });
+
+            foreach ($live as $c) {
+                $names[$c['id']] = $c['name'];
+            }
+        }
 
         $new = [];
         $maxTs = $watermarkTs;
