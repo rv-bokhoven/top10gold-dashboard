@@ -189,7 +189,7 @@
                         };
                     },
                 }">
-                <div x-ref="canvas" class="h-64 sm:h-72"></div>
+                <div x-ref="canvas" class="h-64 sm:h-72" wire:ignore></div>
             </div>
 
             <div class="mt-2 flex items-center gap-4 text-xs text-muted">
