@@ -225,7 +225,7 @@ trait HasDashboardFilters
      */
     public function campaignOptions(): array
     {
-        $live = app(DashboardCache::class)->remember('campaign-options', function () {
+        $live = app(DashboardCache::class)->rememberStable('campaign-options', 360, function () {
             if (blank(config('google_ads.developer_token'))) {
                 return [];
             }

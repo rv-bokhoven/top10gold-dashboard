@@ -322,7 +322,8 @@ class Overview extends Component
         [$from, $to] = $this->range();
         $key = implode(':', ['recent-leads', $this->source, $this->campaign, $from->toDateString(), $to->toDateString()]);
 
-        return app(DashboardCache::class)->remember($key, function () use ($from, $to) {
+        // Stabiel (eigen TTL): live RedTrack-data, hoeft niet bij elke sync weg.
+        return app(DashboardCache::class)->rememberStable($key, 5, function () use ($from, $to) {
             try {
                 $items = app(RedTrackClient::class)->conversions($from->toDateString(), $to->toDateString());
             } catch (\Throwable $e) {

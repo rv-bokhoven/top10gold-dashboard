@@ -103,7 +103,8 @@ class GoogleAds extends Component
     #[Computed]
     public function recentChanges(): array
     {
-        return app(DashboardCache::class)->remember('google-changes', function () {
+        // Stabiel (1u): change history wisselt traag en hoeft niet bij elke sync weg.
+        return app(DashboardCache::class)->rememberStable('google-changes', 60, function () {
             try {
                 return app(GoogleAdsClient::class)->recentChanges(50);
             } catch (\Throwable $e) {
