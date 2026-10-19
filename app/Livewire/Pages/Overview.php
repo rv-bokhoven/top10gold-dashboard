@@ -24,6 +24,9 @@ class Overview extends Component
     #[Url]
     public string $trendTab = 'revenue';
 
+    /** Wordt na de eerste render op true gezet (wire:init) zodat de leads lazy laden. */
+    public bool $leadsReady = false;
+
     #[Url]
     public string $monthSort = 'month';
 
@@ -319,6 +322,11 @@ class Overview extends Component
     #[Computed]
     public function recentLeads(): array
     {
+        // Lazy: pas ophalen nadat de pagina is gerenderd (wire:init).
+        if (! $this->leadsReady) {
+            return ['items' => [], 'total' => 0, 'loading' => true];
+        }
+
         [$from, $to] = $this->range();
         $key = implode(':', ['recent-leads', $this->source, $this->campaign, $from->toDateString(), $to->toDateString()]);
 

@@ -85,7 +85,8 @@
                 'REMOVE' => ['Verwijderd', 'text-negative'],
             ];
         @endphp
-        <div class="rounded-lg bg-surface p-4 transition-opacity sm:p-5" wire:loading.class.delay="opacity-40">
+        <div class="rounded-lg bg-surface p-4 transition-opacity sm:p-5" wire:loading.class.delay="opacity-40"
+            @if (! $changesReady) wire:init="$set('changesReady', true)" @endif>
             <h2 class="text-base font-medium text-fg">Recente wijzigingen</h2>
             <p class="mb-4 text-xs text-subtle">Wijzigingen in het Google Ads-account · laatste 30 dagen</p>
             <div class="max-h-[360px] overflow-auto">
@@ -99,6 +100,15 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @if (! $changesReady)
+                            @for ($i = 0; $i < 5; $i++)
+                                <tr class="border-b border-border/60 last:border-0">
+                                    @foreach (['w-20', 'w-40', 'w-28', 'w-16'] as $w)
+                                        <td class="py-3 pr-3"><div class="h-3 {{ $w }} animate-pulse rounded bg-elevated"></div></td>
+                                    @endforeach
+                                </tr>
+                            @endfor
+                        @else
                         @forelse ($changes as $ch)
                             @php
                                 [$opLabel, $opTone] = $opMap[$ch['operation']] ?? [ucfirst(strtolower((string) $ch['operation'])), 'text-muted'];
@@ -122,6 +132,7 @@
                         @empty
                             <tr><td colspan="4" class="py-10 text-center text-subtle">Geen wijzigingen in de laatste 30 dagen.</td></tr>
                         @endforelse
+                        @endif
                     </tbody>
                 </table>
             </div>

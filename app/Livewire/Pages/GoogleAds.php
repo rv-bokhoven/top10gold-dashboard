@@ -16,6 +16,9 @@ class GoogleAds extends Component
 {
     use HasDashboardFilters;
 
+    /** Wordt na de eerste render op true gezet (wire:init) zodat de wijzigingen lazy laden. */
+    public bool $changesReady = false;
+
     /** Google Ads-totalen voor de periode. */
     #[Computed]
     public function googleAdsTotals(): array
@@ -103,6 +106,11 @@ class GoogleAds extends Component
     #[Computed]
     public function recentChanges(): array
     {
+        // Lazy: pas ophalen nadat de pagina is gerenderd (wire:init).
+        if (! $this->changesReady) {
+            return [];
+        }
+
         // Stabiel (1u): change history wisselt traag en hoeft niet bij elke sync weg.
         return app(DashboardCache::class)->rememberStable('google-changes', 60, function () {
             try {

@@ -236,9 +236,10 @@
         </div>
     </div>
 
-    {{-- Recente leads --}}
+    {{-- Recente leads (inhoud laadt lazy na de eerste render) --}}
     @php $leads = $this->recentLeads; @endphp
-    <div class="rounded-lg bg-surface p-4 sm:p-5 transition-opacity" wire:loading.class.delay="opacity-40">
+    <div class="rounded-lg bg-surface p-4 sm:p-5 transition-opacity" wire:loading.class.delay="opacity-40"
+        @if (! $leadsReady) wire:init="$set('leadsReady', true)" @endif>
         <div class="mb-4 flex items-end justify-between gap-3">
             <div>
                 <h2 class="text-base font-medium text-fg">Recente leads</h2>
@@ -266,6 +267,17 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @if ($leads['loading'] ?? false)
+                        @for ($i = 0; $i < 5; $i++)
+                            <tr class="border-b border-border/60 last:border-0">
+                                @foreach (['w-20', 'w-14', 'w-28', 'w-16', 'w-16', 'w-28', 'w-20', 'w-12'] as $w)
+                                    <td class="py-3 pr-3 {{ $loop->last ? 'text-right' : '' }}">
+                                        <div class="h-3 {{ $w }} animate-pulse rounded bg-elevated {{ $loop->last ? 'ml-auto' : '' }}"></div>
+                                    </td>
+                                @endforeach
+                            </tr>
+                        @endfor
+                    @else
                     @forelse ($leads['items'] as $l)
                         @php
                             $tone = ['Sale' => 'text-positive', 'Q-Lead' => 'text-fg', 'Lead' => 'text-muted'][$l['type_label']] ?? 'text-muted';
@@ -301,6 +313,7 @@
                             @endif
                         </td></tr>
                     @endforelse
+                    @endif
                 </tbody>
             </table>
         </div>
