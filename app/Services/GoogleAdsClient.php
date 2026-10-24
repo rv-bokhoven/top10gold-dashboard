@@ -93,6 +93,25 @@ class GoogleAdsClient
     }
 
     /**
+     * Conversies per campagne/dag uitgesplitst naar conversie-actie — voor
+     * ad-loze campagnes (Performance Max) die buiten de ad-niveau breakdown
+     * vallen. Spiegelbeeld van conversionBreakdown() maar op campagne-niveau.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function campaignConversionBreakdown(string $from, string $to): array
+    {
+        $gaql = <<<GAQL
+            SELECT segments.date, campaign.id,
+                segments.conversion_action_name, metrics.conversions
+            FROM campaign
+            WHERE segments.date BETWEEN '{$from}' AND '{$to}' AND metrics.conversions > 0
+            GAQL;
+
+        return $this->search($gaql);
+    }
+
+    /**
      * Conversies per advertentie/dag uitgesplitst naar conversie-actie. Aparte
      * query omdat segmenteren op conversion_action de kernmetrics zou dupliceren.
      *

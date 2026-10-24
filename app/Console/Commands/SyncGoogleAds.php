@@ -98,6 +98,23 @@ class SyncGoogleAds extends Command
             $campaignRows = [];
         }
 
+        // Conversies per (datum, campagne) uitgesplitst naar actie → voor de
+        // ad-loze campagnes (PMax) die anders op 0 conversies zouden staan.
+        $campaignConv = [];
+        try {
+            foreach ($client->campaignConversionBreakdown($from, $to) as $b) {
+                $action = strtolower($b['segments']['conversionActionName'] ?? '');
+                if (! in_array($action, $actions, true)) {
+                    continue;
+                }
+                $key = ($b['segments']['date'] ?? '').'|'.($b['campaign']['id'] ?? '');
+                $campaignConv[$key]['conv_'.$action] = ($campaignConv[$key]['conv_'.$action] ?? 0)
+                    + (float) ($b['metrics']['conversions'] ?? 0);
+            }
+        } catch (Throwable $e) {
+            // Geen breakdown beschikbaar: conversies blijven 0 voor deze campagnes.
+        }
+
         foreach ($campaignRows as $row) {
             $cid = (string) ($row['campaign']['id'] ?? '');
             if ($cid === '' || $adCampaignIds->has($cid)) {
@@ -105,8 +122,12 @@ class SyncGoogleAds extends Command
             }
 
             $metrics = $row['metrics'] ?? [];
+            $cconv = $campaignConv[($row['segments']['date'] ?? '').'|'.$cid] ?? [];
             $records[] = [
-                'conv_lpclick' => 0, 'conv_lead' => 0, 'conv_qlead' => 0, 'conv_sale' => 0,
+                'conv_lpclick' => round($cconv['conv_lpclick'] ?? 0, 2),
+                'conv_lead' => round($cconv['conv_lead'] ?? 0, 2),
+                'conv_qlead' => round($cconv['conv_qlead'] ?? 0, 2),
+                'conv_sale' => round($cconv['conv_sale'] ?? 0, 2),
                 'stat_date' => $row['segments']['date'],
                 'campaign_id' => $cid,
                 'campaign_name' => $row['campaign']['name'] ?? null,
